@@ -113,6 +113,16 @@ def public_profile(user):
     }
 
 
+def touch_user_presence(username):
+    user = get_user(username)
+    user["last_seen"] = now()
+    return user
+
+
+def is_match_connected(user):
+    return now() - user["last_seen"] <= 12
+
+
 def make_signature(match_id, seq, state):
     packed = json.dumps(state, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(f"{SERVER_SECRET}:{match_id}:{seq}:{packed}".encode("utf-8")).hexdigest()
@@ -130,6 +140,7 @@ def finalize_match(match, reason):
     replay_id = secrets.token_hex(10)
     match["ended_at"] = now()
     match["replay_id"] = replay_id
+    match["end_reason"] = reason
     replay_payload = {
         "id": replay_id,
         "matchId": match["id"],
@@ -151,6 +162,78 @@ def finalize_match(match, reason):
 def clamp_chat_message(message):
     cleaned = normalize_text(message, "", 120)
     return cleaned[:120]
+
+
+def default_presence_state():
+    return {
+        "cursorX": 0.5,
+        "cursorY": 0.5,
+        "hoveredCardId": "",
+        "hoveredCardName": "",
+        "selectedCardId": "",
+        "selectedCardName": "",
+        "overlay": "idle",
+        "actionName": "",
+        "triviaQuestion": "",
+        "triviaChoice": "",
+        "triviaState": "idle",
+        "statusText": "",
+        "updatedAt": 0,
+    }
+
+
+def sanitize_presence_payload(payload):
+    base = default_presence_state()
+    if not isinstance(payload, dict):
+        return base
+
+    def _clean_text(value, max_length):
+        return normalize_text(value, "", max_length)
+
+    cursor_x = payload.get("cursorX", 0.5)
+    cursor_y = payload.get("cursorY", 0.5)
+    try:
+        base["cursorX"] = max(0.0, min(1.0, float(cursor_x)))
+        base["cursorY"] = max(0.0, min(1.0, float(cursor_y)))
+    except (TypeError, ValueError):
+        pass
+
+    base["hoveredCardId"] = _clean_text(payload.get("hoveredCardId", ""), 64)
+    base["hoveredCardName"] = _clean_text(payload.get("hoveredCardName", ""), 40)
+    base["selectedCardId"] = _clean_text(payload.get("selectedCardId", ""), 64)
+    base["selectedCardName"] = _clean_text(payload.get("selectedCardName", ""), 40)
+    overlay = str(payload.get("overlay", "idle")).lower()
+    base["overlay"] = overlay if overlay in {"idle", "hover", "selected", "action", "trivia", "result"} else "idle"
+    base["actionName"] = _clean_text(payload.get("actionName", ""), 40)
+    base["triviaQuestion"] = _clean_text(payload.get("triviaQuestion", ""), 120)
+    base["triviaChoice"] = _clean_text(payload.get("triviaChoice", ""), 60)
+    trivia_state = str(payload.get("triviaState", "idle")).lower()
+    base["triviaState"] = trivia_state if trivia_state in {"idle", "thinking", "locked", "correct", "wrong", "timeout"} else "idle"
+    base["statusText"] = _clean_text(payload.get("statusText", ""), 80)
+    base["updatedAt"] = now()
+    return base
+
+
+def ensure_match_not_disconnected(match):
+    if match.get("quit_by"):
+        return
+    p1_user = get_user(match["players"]["p1"])
+    p2_user = get_user(match["players"]["p2"])
+    if is_match_connected(p1_user) and is_match_connected(p2_user):
+        return
+
+    loser_key = "p1" if not is_match_connected(p1_user) else "p2"
+    winner_key = "p2" if loser_key == "p1" else "p1"
+    match["quit_by"] = loser_key
+    match["disconnect_winner"] = winner_key
+    winner_user = get_user(match["players"][winner_key])
+    loser_user = get_user(match["players"][loser_key])
+    winner_user["games"] += 1
+    loser_user["games"] += 1
+    winner_user["wins"] += 1
+    match["updated_at"] = now()
+    release_match_players(match)
+    finalize_match(match, "disconnect")
 
 
 def release_downloads():
@@ -310,6 +393,7 @@ def match_payload_for(username, match):
         "lastReactionId": match.get("last_reaction_id"),
         "lastChatId": match.get("last_chat_id"),
         "replayId": match.get("replay_id"),
+        "endReason": match.get("end_reason"),
     }
 
 
@@ -332,7 +416,10 @@ def create_match(p1_name, p2_name):
         "state_history": [],
         "rate_limit": {"p1": {"reaction_at": 0, "chat_at": 0}, "p2": {"reaction_at": 0, "chat_at": 0}},
         "quit_by": None,
+        "disconnect_winner": None,
+        "presence": {"p1": default_presence_state(), "p2": default_presence_state()},
         "replay_id": None,
+        "end_reason": None,
     }
     STATE["matches"][match_id] = match
     get_user(p1_name)["pending_match_id"] = match_id
@@ -833,6 +920,8 @@ class BoneyRadiumHandler(BaseHTTPRequestHandler):
                     json_response(self, 403, {"ok": False, "error": "unauthorized"})
                     return
                 username = match["players"][player_key]
+                touch_user_presence(username)
+                ensure_match_not_disconnected(match)
                 payload = {
                     "ok": True,
                     "seq": match["seq"],
@@ -843,6 +932,9 @@ class BoneyRadiumHandler(BaseHTTPRequestHandler):
                     "chatMessages": match.get("chat_messages", []),
                     "lastChatId": match.get("last_chat_id"),
                     "quitBy": match.get("quit_by"),
+                    "disconnectWinner": match.get("disconnect_winner"),
+                    "endReason": match.get("end_reason"),
+                    "presence": copy.deepcopy(match.get("presence", {})),
                     "replayId": match.get("replay_id"),
                     "opponent": public_profile(get_user(match["players"]["p1" if player_key == "p2" else "p2"])),
                     "you": username,
@@ -887,10 +979,9 @@ class BoneyRadiumHandler(BaseHTTPRequestHandler):
                 json_response(self, 400, {"ok": False, "error": "username required"})
                 return
             with LOCK:
-                user = get_user(username)
+                user = touch_user_presence(username)
                 user["title"] = normalize_text(body.get("title", ""), "", 32)
                 user["accent"] = normalize_color(body.get("accent", "#66d6ff"))
-                user["last_seen"] = now()
             json_response(self, 200, {"ok": True})
             return
 
@@ -915,10 +1006,9 @@ class BoneyRadiumHandler(BaseHTTPRequestHandler):
                 return
             with LOCK:
                 prune_queue()
-                user = get_user(username)
+                user = touch_user_presence(username)
                 user["title"] = normalize_text(body.get("title", ""), "", 32)
                 user["accent"] = normalize_color(body.get("accent", "#66d6ff"))
-                user["last_seen"] = now()
                 if user["pending_match_id"]:
                     match = STATE["matches"].get(user["pending_match_id"])
                     if match:
@@ -974,6 +1064,7 @@ class BoneyRadiumHandler(BaseHTTPRequestHandler):
                 if match.get("quit_by"):
                     json_response(self, 409, {"ok": False, "error": "match has ended"})
                     return
+                touch_user_presence(match["players"][player_key])
                 if match["signature"] and previous_signature != match["signature"]:
                     STATE["stats"]["rejected_syncs"] += 1
                     json_response(self, 409, {"ok": False, "error": "stale signature"})
@@ -1015,6 +1106,30 @@ class BoneyRadiumHandler(BaseHTTPRequestHandler):
             json_response(self, 200, {"ok": True, "seq": match["seq"], "signature": match["signature"], "replayId": match.get("replay_id")})
             return
 
+        if path.startswith("/api/matches/") and path.endswith("/presence"):
+            parts = path.strip("/").split("/")
+            match_id = parts[2]
+            player_key = body.get("playerKey", "")
+            token = body.get("token", "")
+            presence = sanitize_presence_payload(body.get("presence", {}))
+            if not is_safe_id(match_id, 8, 24) or player_key not in {"p1", "p2"} or not is_safe_token(token):
+                json_response(self, 400, {"ok": False, "error": "invalid match credentials"})
+                return
+
+            with LOCK:
+                match = STATE["matches"].get(match_id)
+                if not match or match["tokens"].get(player_key) != token:
+                    json_response(self, 403, {"ok": False, "error": "unauthorized"})
+                    return
+                if match.get("quit_by"):
+                    json_response(self, 409, {"ok": False, "error": "match has ended"})
+                    return
+                touch_user_presence(match["players"][player_key])
+                match["presence"][player_key] = presence
+                match["updated_at"] = now()
+            json_response(self, 200, {"ok": True})
+            return
+
         if path.startswith("/api/matches/") and path.endswith("/reaction"):
             parts = path.strip("/").split("/")
             match_id = parts[2]
@@ -1034,6 +1149,7 @@ class BoneyRadiumHandler(BaseHTTPRequestHandler):
                 if match.get("quit_by"):
                     json_response(self, 409, {"ok": False, "error": "match has ended"})
                     return
+                touch_user_presence(match["players"][player_key])
                 if message not in allowed_reactions:
                     json_response(self, 400, {"ok": False, "error": "invalid reaction"})
                     return
@@ -1076,6 +1192,7 @@ class BoneyRadiumHandler(BaseHTTPRequestHandler):
                 if match.get("quit_by"):
                     json_response(self, 409, {"ok": False, "error": "match has ended"})
                     return
+                touch_user_presence(match["players"][player_key])
                 if not message:
                     json_response(self, 400, {"ok": False, "error": "message required"})
                     return
@@ -1114,6 +1231,7 @@ class BoneyRadiumHandler(BaseHTTPRequestHandler):
                     json_response(self, 403, {"ok": False, "error": "unauthorized"})
                     return
                 match["quit_by"] = player_key
+                match["disconnect_winner"] = "p2" if player_key == "p1" else "p1"
                 match["updated_at"] = now()
                 release_match_players(match)
                 replay_id = finalize_match(match, "quit")

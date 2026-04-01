@@ -23,6 +23,8 @@
       --input-bg: #ffffff;
       --overlay-bg: rgba(255, 255, 255, 0.8);
       --panel-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      --card-slot-width: 140px;
+      --card-slot-height: 200px;
       --p1-accent-rgb: 102, 214, 255;
       --p2-accent-rgb: 255, 126, 169;
       --active-accent-rgb: 102, 214, 255;
@@ -397,7 +399,7 @@
       justify-content: center;
       align-items: flex-end;
       padding-bottom: 2rem;
-      height: 350px; 
+      height: min(350px, 40vh); 
     }
 
     .card-container {
@@ -406,8 +408,8 @@
       flex-direction: column;
       align-items: center;
       /* The container stays the visual size we want in the hand */
-      width: 140px; 
-      height: 200px;
+      width: var(--card-slot-width); 
+      height: var(--card-slot-height);
       perspective: 1000px;
       /* We control the gap via margin instead of flex gap so we can transition it */
       margin: 0 0.5rem;
@@ -436,8 +438,8 @@
       transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
       position: absolute; 
       /* Center the massive card exactly over its tiny container */
-      bottom: -471px; /* (1143 - 200) / 2 */
-      left: -330px; /* (800 - 140) / 2 */
+      bottom: calc((var(--card-slot-height) - 1143px) / 2);
+      left: calc((var(--card-slot-width) - 800px) / 2);
       z-index: 1;
       transform-origin: center center;
       transform: scale(var(--hand-card-scale, 0.175));
@@ -1055,6 +1057,75 @@
       backdrop-filter: blur(10px);
     }
 
+    #opponent-presence-card {
+      position: absolute;
+      left: 16px;
+      top: 86px;
+      z-index: 165;
+      display: none;
+      min-width: 240px;
+      max-width: min(360px, 46vw);
+      border-radius: 16px;
+      padding: 0.85rem 0.95rem;
+      background: linear-gradient(145deg, color-mix(in oklab, var(--surface-2) 90%, rgba(var(--p2-accent-rgb), 0.16)), color-mix(in oklab, var(--surface) 94%, transparent));
+      border: 2px solid rgba(var(--p2-accent-rgb), 0.28);
+      box-shadow: var(--panel-shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .presence-kicker {
+      font-size: 0.72rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 0.45rem;
+    }
+
+    .presence-line {
+      font-size: 0.92rem;
+      margin-top: 0.3rem;
+      color: var(--text);
+    }
+
+    #opponent-cursor {
+      position: absolute;
+      left: 0;
+      top: 0;
+      z-index: 170;
+      display: none;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .opponent-cursor-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: rgba(var(--p2-accent-rgb), 0.95);
+      box-shadow: 0 0 0 10px rgba(var(--p2-accent-rgb), 0.18);
+      position: relative;
+    }
+
+    .opponent-cursor-label {
+      margin-top: 0.45rem;
+      display: inline-block;
+      padding: 0.3rem 0.55rem;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.72);
+      color: #fff;
+      font-size: 0.76rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .remote-card-hover {
+      filter: drop-shadow(0 0 16px rgba(var(--p2-accent-rgb), 0.6));
+    }
+
+    .remote-card-selected {
+      filter: drop-shadow(0 0 24px rgba(var(--p2-accent-rgb), 0.85)) brightness(1.08);
+    }
+
     #super-menu > div,
     #profile-menu > div,
     #settings-box {
@@ -1072,6 +1143,10 @@
     }
 
     @media (max-width: 920px) {
+      :root {
+        --card-slot-width: 112px;
+        --card-slot-height: 160px;
+      }
       .health-bars {
         padding: 1rem;
       }
@@ -1090,6 +1165,63 @@
       }
       .player {
         padding: 6.2rem 1rem 1rem;
+      }
+      #online-match-controls,
+      #opponent-presence-card {
+        max-width: calc(100vw - 32px);
+      }
+      #online-match-controls {
+        top: auto;
+        bottom: 12px;
+        right: 12px;
+        left: 12px;
+      }
+      #opponent-presence-card {
+        top: 88px;
+        left: 12px;
+      }
+      .online-chat-input {
+        min-width: 0;
+      }
+    }
+
+    @media (max-width: 700px), (max-height: 860px) {
+      :root {
+        --card-slot-width: 96px;
+        --card-slot-height: 138px;
+      }
+      .health-bars {
+        gap: 0.5rem;
+        padding: 0.75rem;
+      }
+      .health-label {
+        font-size: 0.9rem;
+      }
+      .player {
+        padding: 5.6rem 0.75rem 0.75rem;
+      }
+      .hand {
+        height: min(250px, 32vh);
+      }
+      #turn-banner {
+        font-size: 1.5rem;
+        padding: 0.8rem 1.1rem;
+      }
+      #opponent-presence-card {
+        position: fixed;
+        top: 72px;
+        left: 10px;
+        right: 10px;
+        min-width: 0;
+        max-width: none;
+      }
+      .presence-line {
+        font-size: 0.84rem;
+      }
+      #online-match-controls {
+        position: fixed;
+        gap: 0.35rem;
+        padding: 0.45rem;
       }
     }
 
@@ -1361,11 +1493,11 @@
         </div>
       </div>
       <div class="color-pickers">
-        <div class="color-picker-group">
-          <div class="color-picker-label">Player 1 Color</div>
+        <div class="color-picker-group" id="p1-color-group">
+          <div class="color-picker-label" id="p1-color-label">Player 1 Color</div>
           <div class="color-picker" id="p1-color-picker"></div>
         </div>
-        <div class="color-picker-group">
+        <div class="color-picker-group" id="p2-color-group">
           <div class="color-picker-label">Player 2 Color</div>
           <div class="color-picker" id="p2-color-picker"></div>
         </div>
@@ -1385,6 +1517,17 @@
   </div>
 
   <div id="battle-log"></div>
+  <div id="opponent-presence-card">
+    <div class="presence-kicker">Opponent Activity</div>
+    <div id="opponent-presence-name" style="font-size: 1.05rem; font-weight: 800;">Opponent</div>
+    <div id="opponent-presence-status" class="presence-line">Waiting for movement…</div>
+    <div id="opponent-presence-card-line" class="presence-line"></div>
+    <div id="opponent-presence-trivia" class="presence-line"></div>
+  </div>
+  <div id="opponent-cursor">
+    <div class="opponent-cursor-dot"></div>
+    <div id="opponent-cursor-label" class="opponent-cursor-label">Opponent</div>
+  </div>
   <div id="online-match-controls">
     <div class="reaction-strip" id="reaction-strip-live">
       <button class="reaction-btn" data-reaction="🔥">🔥</button>
@@ -2314,7 +2457,7 @@
             const rotation = relativePos * 5; // 5 degrees per card away from center
             const translateY = Math.abs(relativePos) * 10; // Slight arch effect
 
-            const baseScale = Math.max(0.12, Math.min(0.19, window.innerWidth / 5400));
+            const baseScale = Math.max(0.1, Math.min(0.19, Math.min(window.innerWidth / 5400, window.innerHeight / 4200)));
             cardEl.style.transform = `translate(0, ${translateY}px) scale(${baseScale}) rotate(${rotation}deg)`;
             cardEl.style.zIndex = "1"; // Reset z-index
           }
@@ -2330,7 +2473,7 @@
       const activePlayer = game.players.find(pl => pl.key === game.currentTurn) || game.players[0];
       setSceneAccents(game.players[0].accent, game.players[1].accent, activePlayer.accent);
       document.body.setAttribute('data-active', activePlayer.key);
-      const handScale = Math.max(0.12, Math.min(0.19, window.innerWidth / 5400));
+      const handScale = Math.max(0.1, Math.min(0.19, Math.min(window.innerWidth / 5400, window.innerHeight / 4200)));
       document.documentElement.style.setProperty('--hand-card-scale', String(handScale));
 
       // Apply dynamic character themes based on whose turn it is
@@ -2400,10 +2543,29 @@
       } else {
         requestAnimationFrame(calculateCardPositions);
       }
+      renderRemotePresence();
     };
 
     const bind = () => {
       board.querySelectorAll(".card").forEach((cardButton) => {
+        cardButton.addEventListener("mouseenter", () => {
+          if (!window.isMultiplayer || cardButton.dataset.player !== window.myPlayerKey) return;
+          const card = game.players.find((player) => player.key === window.myPlayerKey)?.hand.find((item) => item.id === cardButton.dataset.id);
+          updateLocalPresence({
+            hoveredCardId: cardButton.dataset.id,
+            hoveredCardName: card?.name || '',
+            statusText: `Hovering ${card?.name || 'a card'}`,
+            overlay: 'hover'
+          });
+        });
+        cardButton.addEventListener("mouseleave", () => {
+          if (!window.isMultiplayer || cardButton.dataset.player !== window.myPlayerKey) return;
+          updateLocalPresence({
+            hoveredCardId: '',
+            hoveredCardName: '',
+            overlay: game.players.find((player) => player.key === window.myPlayerKey)?.selected ? 'selected' : 'idle'
+          });
+        });
         cardButton.addEventListener("click", () => {
           if (isTransitioning) return; // Prevent clicks while animations are playing
           
@@ -2427,6 +2589,12 @@
             
             const card = player.hand.find(c => c.id === cardId);
             if (card && card.data && card.data.actions) {
+              updateLocalPresence({
+                selectedCardId: card.id,
+                selectedCardName: card.name,
+                statusText: `Locked ${card.name}`,
+                overlay: 'selected'
+              }, true);
               showActionOverlay(playerKey, card);
             } else {
               // Fallback if no data
@@ -2435,10 +2603,27 @@
           } else {
             // Select the new card
             player.selected = cardId;
+            const card = player.hand.find(c => c.id === cardId);
+            updateLocalPresence({
+              selectedCardId: cardId,
+              selectedCardName: card?.name || '',
+              statusText: `Picked ${card?.name || 'a card'}`,
+              overlay: 'selected'
+            }, true);
             render();
           }
         });
       });
+
+      board.onmousemove = (event) => {
+        if (!window.isMultiplayer || !window.onlineSession.active || board.style.display !== 'block') return;
+        const rect = board.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        updateLocalPresence({
+          cursorX: (event.clientX - rect.left) / rect.width,
+          cursorY: (event.clientY - rect.top) / rect.height
+        });
+      };
     };
 
     // --- Battle Overlays ---
@@ -2734,6 +2919,19 @@
         if (status) status.textContent = `Attack failed!`;
       }
 
+      updateLocalPresence({
+        hoveredCardId: '',
+        hoveredCardName: '',
+        selectedCardId: '',
+        selectedCardName: '',
+        actionName: '',
+        triviaQuestion: '',
+        triviaChoice: '',
+        triviaState: 'idle',
+        statusText: success ? `${card.name} resolved` : `${card.name} fizzled`,
+        overlay: 'idle'
+      }, true);
+
       // Check for death before continuing the turn
       const p1 = game.players[0];
       const p2 = game.players[1];
@@ -2794,6 +2992,12 @@
       const overlay = document.getElementById('action-overlay');
       const list = document.getElementById('action-list');
       list.innerHTML = '';
+      updateLocalPresence({
+        selectedCardId: card.id,
+        selectedCardName: card.name,
+        statusText: `Choosing an action for ${card.name}`,
+        overlay: 'action'
+      }, true);
 
       card.data.actions.forEach((action, index) => {
         const btn = document.createElement('button');
@@ -2823,6 +3027,11 @@
            btn.style.cursor = 'not-allowed';
         } else {
            btn.onclick = () => {
+             updateLocalPresence({
+               actionName: action.name,
+               statusText: `Picked action ${action.name}`,
+               overlay: 'trivia'
+             }, true);
              showTriviaOverlay(playerKey, card, action);
            };
         }
@@ -2836,6 +3045,13 @@
         // Deselect the card
         const player = game.players.find(p => p.key === playerKey);
         if (player) player.selected = null;
+        updateLocalPresence({
+          selectedCardId: '',
+          selectedCardName: '',
+          actionName: '',
+          statusText: 'Backed out of the card',
+          overlay: 'idle'
+        }, true);
         render();
       };
 
@@ -2850,6 +3066,14 @@
       
       // Pick a random question from the action's questions array
       const questionObj = action.questions[Math.floor(Math.random() * action.questions.length)];
+      updateLocalPresence({
+        actionName: action.name,
+        triviaQuestion: questionObj.question,
+        triviaChoice: '',
+        triviaState: 'thinking',
+        statusText: `Answering ${action.name}`,
+        overlay: 'trivia'
+      }, true);
       
       document.getElementById('trivia-question').textContent = questionObj.question;
       const optionsContainer = document.getElementById('trivia-options');
@@ -2889,6 +3113,11 @@
             else b.classList.add('wrong');
           });
           showBattleLog("Time's up! Turn lost.");
+          updateLocalPresence({
+            triviaState: 'timeout',
+            statusText: 'Ran out of time',
+            overlay: 'result'
+          }, true);
           setTimeout(() => finishTurn(playerKey, card, action, false), 2000);
         }
       }, 100);
@@ -2914,6 +3143,12 @@
           if (opt.isCorrect) {
             audioSystem.playSfx('trivcorrect');
             btn.classList.add('correct');
+            updateLocalPresence({
+              triviaChoice: opt.text,
+              triviaState: 'correct',
+              statusText: `Answered correctly: ${opt.text}`,
+              overlay: 'result'
+            }, true);
             // Dim the others
             Array.from(optionsContainer.children).forEach(b => {
               if (b !== btn) b.classList.add('wrong');
@@ -2922,6 +3157,12 @@
           } else {
             audioSystem.playSfx('trivwrong');
             btn.classList.add('wrong');
+            updateLocalPresence({
+              triviaChoice: opt.text,
+              triviaState: 'wrong',
+              statusText: `Answered ${opt.text}`,
+              overlay: 'result'
+            }, true);
             // Highlight correct one
             Array.from(optionsContainer.children).forEach(b => {
               if (b.dataset.correct === "true") {
@@ -3152,6 +3393,8 @@
       if (window.isMultiplayer) {
         window.onlineSession.started = true;
         window.peerConnection = { mode: 'server-sync' };
+        window.onlineSession.localPresence = defaultPresenceState();
+        updateLocalPresence({ statusText: 'Match started', overlay: 'idle' }, true);
       }
 
       recordReplayStep('Match started');
@@ -3543,6 +3786,11 @@
       lastReactionId: null,
       lastChatId: null,
       replayId: null,
+      localPresence: null,
+      remotePresence: null,
+      presenceTimer: null,
+      heartbeatTimer: null,
+      lastPresencePush: 0,
       queueTimer: null,
       stateTimer: null,
       syncInFlight: false
@@ -3576,6 +3824,9 @@
     const onlineChatSendBtnLive = document.getElementById('online-chat-send-btn-live');
     const serverReplayIdInput = document.getElementById('server-replay-id-input');
     const loadServerReplayBtn = document.getElementById('load-server-replay-btn');
+    const p1ColorGroup = document.getElementById('p1-color-group');
+    const p2ColorGroup = document.getElementById('p2-color-group');
+    const p1ColorLabel = document.getElementById('p1-color-label');
     const startGameButton = document.getElementById('start-game-btn');
     const quitMatchButton = document.getElementById('quit-match-btn');
     const quitMatchButtonLive = document.getElementById('quit-match-btn-live');
@@ -3583,6 +3834,13 @@
     const replayOverlay = document.getElementById('replay-overlay');
     const replayCaption = document.getElementById('replay-caption');
     const replayStepLabel = document.getElementById('replay-step-label');
+    const opponentPresenceCard = document.getElementById('opponent-presence-card');
+    const opponentPresenceName = document.getElementById('opponent-presence-name');
+    const opponentPresenceStatus = document.getElementById('opponent-presence-status');
+    const opponentPresenceCardLine = document.getElementById('opponent-presence-card-line');
+    const opponentPresenceTrivia = document.getElementById('opponent-presence-trivia');
+    const opponentCursor = document.getElementById('opponent-cursor');
+    const opponentCursorLabel = document.getElementById('opponent-cursor-label');
 
     const xorEncryptDecrypt = (input) => {
       let output = '';
@@ -3741,11 +3999,112 @@
       }
     };
 
+    const defaultPresenceState = () => ({
+      cursorX: 0.5,
+      cursorY: 0.5,
+      hoveredCardId: '',
+      hoveredCardName: '',
+      selectedCardId: '',
+      selectedCardName: '',
+      overlay: 'idle',
+      actionName: '',
+      triviaQuestion: '',
+      triviaChoice: '',
+      triviaState: 'idle',
+      statusText: ''
+    });
+
+    const syncColorPickerMode = () => {
+      if (window.isMultiplayer) {
+        p1ColorLabel.textContent = 'Your Color';
+        p2ColorGroup.style.display = 'none';
+      } else {
+        p1ColorLabel.textContent = 'Player 1 Color';
+        p2ColorGroup.style.display = 'block';
+      }
+    };
+
+    const renderRemotePresence = () => {
+      const shouldShow = window.isMultiplayer && window.onlineSession.active && board.style.display === 'block';
+      const presence = window.onlineSession.remotePresence;
+      if (!shouldShow || !presence) {
+        opponentPresenceCard.style.display = 'none';
+        opponentCursor.style.display = 'none';
+        document.querySelectorAll('.remote-card-hover, .remote-card-selected').forEach((el) => {
+          el.classList.remove('remote-card-hover', 'remote-card-selected');
+        });
+        return;
+      }
+
+      const opponentName = window.onlineSession.opponent?.username || 'Opponent';
+      opponentPresenceCard.style.display = 'block';
+      opponentPresenceName.textContent = opponentName;
+      opponentPresenceStatus.textContent = presence.statusText || 'Watching the board';
+      opponentPresenceCardLine.textContent = presence.selectedCardName
+        ? `Card: ${presence.selectedCardName}`
+        : (presence.hoveredCardName ? `Hovering: ${presence.hoveredCardName}` : 'No card locked yet');
+      opponentPresenceTrivia.textContent = presence.triviaQuestion
+        ? `${presence.triviaState === 'locked' ? 'Answering' : 'Trivia'}: ${presence.triviaChoice || presence.triviaQuestion}`
+        : (presence.actionName ? `Action: ${presence.actionName}` : '');
+
+      opponentCursorLabel.textContent = opponentName;
+      const boardRect = board.getBoundingClientRect();
+      opponentCursor.style.display = 'block';
+      opponentCursor.style.left = `${boardRect.left + (presence.cursorX || 0.5) * boardRect.width}px`;
+      opponentCursor.style.top = `${boardRect.top + (presence.cursorY || 0.5) * boardRect.height}px`;
+
+      document.querySelectorAll('.remote-card-hover, .remote-card-selected').forEach((el) => {
+        el.classList.remove('remote-card-hover', 'remote-card-selected');
+      });
+      if (presence.hoveredCardId) {
+        document.querySelector(`.card[data-id="${CSS.escape(presence.hoveredCardId)}"]`)?.classList.add('remote-card-hover');
+      }
+      if (presence.selectedCardId) {
+        document.querySelector(`.card[data-id="${CSS.escape(presence.selectedCardId)}"]`)?.classList.add('remote-card-selected');
+      }
+    };
+
+    const pushPresence = async (force = false) => {
+      if (!window.onlineSession.active || !window.onlineSession.matchId || !window.onlineSession.token) return;
+      const nowTime = Date.now();
+      if (!force && nowTime - window.onlineSession.lastPresencePush < 120) return;
+      window.onlineSession.lastPresencePush = nowTime;
+      try {
+        await serverRequest(`/api/matches/${window.onlineSession.matchId}/presence`, {
+          method: 'POST',
+          body: {
+            playerKey: window.myPlayerKey,
+            token: window.onlineSession.token,
+            presence: window.onlineSession.localPresence || defaultPresenceState()
+          }
+        });
+      } catch (error) {
+        console.warn('Presence sync failed', error);
+      }
+    };
+
+    const updateLocalPresence = (partial = {}, force = false) => {
+      if (!window.onlineSession.localPresence) {
+        window.onlineSession.localPresence = defaultPresenceState();
+      }
+      Object.assign(window.onlineSession.localPresence, partial);
+      if (window.onlineSession.presenceTimer) {
+        clearTimeout(window.onlineSession.presenceTimer);
+      }
+      window.onlineSession.presenceTimer = setTimeout(() => {
+        pushPresence(force);
+      }, force ? 0 : 80);
+    };
+
     const resetOnlineTimers = () => {
       clearInterval(window.onlineSession.queueTimer);
       clearInterval(window.onlineSession.stateTimer);
+      clearInterval(window.onlineSession.heartbeatTimer);
+      clearTimeout(window.onlineSession.presenceTimer);
       window.onlineSession.queueTimer = null;
       window.onlineSession.stateTimer = null;
+      window.onlineSession.heartbeatTimer = null;
+      window.onlineSession.presenceTimer = null;
     };
 
     const updateStartButtonState = () => {
@@ -3777,6 +4136,7 @@
       const canQuit = window.onlineSession.active;
       quitMatchButton.disabled = !canQuit;
       quitMatchButtonLive.disabled = !canQuit;
+      renderRemotePresence();
     };
 
     const resetOnlineSession = ({ preserveStatus = false } = {}) => {
@@ -3794,6 +4154,11 @@
         lastReactionId: null,
         lastChatId: null,
         replayId: null,
+        localPresence: defaultPresenceState(),
+        remotePresence: null,
+        presenceTimer: null,
+        heartbeatTimer: null,
+        lastPresencePush: 0,
         queueTimer: null,
         stateTimer: null,
         syncInFlight: false
@@ -3808,6 +4173,7 @@
       onlineChatInputEl.value = '';
       onlineChatInputLiveEl.value = '';
       updateStartButtonState();
+      syncColorPickerMode();
       syncOnlineControls();
     };
 
@@ -3946,6 +4312,7 @@
         window.handleDeath(p1.hp <= 0 ? p1 : p2, p1.hp <= 0 ? p2 : p1);
       }
       window.isReceivingSync = false;
+      renderRemotePresence();
     };
 
     const pollMatchState = async () => {
@@ -3969,11 +4336,24 @@
           const quitterLabel = payload.quitBy === window.myPlayerKey
             ? 'You'
             : (window.onlineSession.opponent?.username || 'Opponent');
-          showBattleLog(`${quitterLabel} quit the match.`);
+          const isDisconnect = payload.endReason === 'disconnect';
+          showBattleLog(isDisconnect ? `${quitterLabel} disconnected.` : `${quitterLabel} quit the match.`);
           matchmakingStatusEl.textContent = payload.quitBy === window.myPlayerKey
             ? 'You left the match.'
-            : 'Opponent quit the match.';
-          if (board.style.display === 'block') {
+            : (isDisconnect ? 'Opponent disconnected.' : 'Opponent quit the match.');
+          if (board.style.display === 'block' && payload.quitBy !== window.myPlayerKey) {
+            const loser = game.players.find((player) => player.key === payload.quitBy) || game.players.find((player) => player.key !== window.myPlayerKey);
+            const winner = game.players.find((player) => player.key !== loser?.key) || game.players.find((player) => player.key === window.myPlayerKey);
+            if (loser && winner && !window.deathHandled) {
+              window.deathHandled = true;
+              window.handleDeath(
+                loser,
+                winner,
+                `${winner.label} wins by ${isDisconnect ? 'disconnect' : 'forfeit'}!`,
+                `${loser.label} ${isDisconnect ? 'lost connection' : 'left the match'}.`
+              );
+            }
+          } else if (board.style.display === 'block') {
             board.style.display = 'none';
             nameSetup.style.display = 'flex';
             document.body.setAttribute('data-screen', 'setup');
@@ -4005,6 +4385,12 @@
           renderOnlineChat(payload.chatMessages);
         }
 
+        if (payload.presence) {
+          const opponentKey = window.myPlayerKey === 'p1' ? 'p2' : 'p1';
+          window.onlineSession.remotePresence = payload.presence[opponentKey] || null;
+          renderRemotePresence();
+        }
+
         if (payload.replayId) {
           window.onlineSession.replayId = payload.replayId;
         }
@@ -4033,6 +4419,8 @@
       window.onlineSession.lastReactionId = payload.lastReactionId || null;
       window.onlineSession.lastChatId = payload.lastChatId || null;
       window.onlineSession.replayId = payload.replayId || null;
+      window.onlineSession.localPresence = defaultPresenceState();
+      window.onlineSession.remotePresence = null;
       serverReplayIdInput.value = payload.replayId || '';
       window.myPlayerKey = payload.playerKey;
       window.peerConnection = { mode: 'server-sync' };
@@ -4041,13 +4429,16 @@
       p1NameInput.value = userProfile.username;
       p2NameInput.value = payload.opponent?.username || 'Opponent';
       selectedPlayerColors.p2 = payload.opponent?.accent || selectedPlayerColors.p2;
+      syncColorPickerMode();
       matchmakingStatusEl.textContent = payload.playerKey === 'p1'
         ? 'Match found. You are the host. Configure the match and start when ready.'
         : 'Match found. Waiting for the host to start.';
       updateStartButtonState();
       quitMatchButton.disabled = false;
       renderOnlineChat([]);
+      renderRemotePresence();
       window.onlineSession.stateTimer = setInterval(pollMatchState, 900);
+      window.onlineSession.heartbeatTimer = setInterval(sendHeartbeat, 8000);
       syncOnlineControls();
     };
 
@@ -4069,6 +4460,8 @@
           window.onlineSession.lastReactionId = payload.lastReactionId;
         }
         showOnlineReaction('You', reaction);
+        updateLocalPresence({ statusText: `Reacted ${reaction}` }, true);
+        await pollMatchState();
       } catch (error) {
         matchmakingStatusEl.textContent = `Reaction failed: ${error.message}`;
       }
@@ -4126,6 +4519,8 @@
         }
         onlineChatInputEl.value = '';
         onlineChatInputLiveEl.value = '';
+        updateLocalPresence({ statusText: `Sent "${raw.slice(0, 18)}"`, overlay: 'result' }, true);
+        await pollMatchState();
       } catch (error) {
         matchmakingStatusEl.textContent = `Chat failed: ${error.message}`;
       }
@@ -4258,6 +4653,7 @@
       p1NameInput.value = userProfile.username;
       p2NameInput.focus();
       window.isMultiplayer = false;
+      syncColorPickerMode();
       updateStartButtonState();
       syncOnlineControls();
     });
@@ -4270,6 +4666,7 @@
       p2InputGroup.style.display = 'none';
       p1NameInput.value = userProfile.username;
       window.isMultiplayer = true;
+      syncColorPickerMode();
       activeServerLabel.textContent = window.serverConfig.baseUrl;
       matchmakingStatusEl.textContent = 'Ready to queue.';
       updateStartButtonState();
@@ -4648,6 +5045,7 @@
     requestAnimationFrame(pollControllers);
 
     updateProfileUI();
+    syncColorPickerMode();
     updateStartButtonState();
     syncOnlineControls();
     sendHeartbeat();

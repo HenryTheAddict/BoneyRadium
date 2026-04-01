@@ -20,6 +20,9 @@ from server import (
     match_payload_for,
     release_downloads,
     RELEASE_DIR,
+    sanitize_presence_payload,
+    touch_user_presence,
+    ensure_match_not_disconnected,
     normalize_color,
     clamp_chat_message,
     normalize_text,
@@ -126,6 +129,8 @@ def _route(method, path, query, body, remote_ip):
             if not match or match["tokens"].get(player_key) != token:
                 return _json(403, {"ok": False, "error": "unauthorized"})
             username = match["players"][player_key]
+            touch_user_presence(username)
+            ensure_match_not_disconnected(match)
             payload = {
                 "ok": True,
                 "seq": match["seq"],
@@ -136,6 +141,9 @@ def _route(method, path, query, body, remote_ip):
                 "chatMessages": match.get("chat_messages", []),
                 "lastChatId": match.get("last_chat_id"),
                 "quitBy": match.get("quit_by"),
+                "disconnectWinner": match.get("disconnect_winner"),
+                "endReason": match.get("end_reason"),
+                "presence": copy.deepcopy(match.get("presence", {})),
                 "replayId": match.get("replay_id"),
                 "opponent": public_profile(get_user(match["players"]["p1" if player_key == "p2" else "p2"])),
                 "you": username,
@@ -157,10 +165,9 @@ def _route(method, path, query, body, remote_ip):
         if not username:
             return _json(400, {"ok": False, "error": "username required"})
         with LOCK:
-            user = get_user(username)
+            user = touch_user_presence(username)
             user["title"] = normalize_text(body.get("title", ""), "", 32)
             user["accent"] = normalize_color(body.get("accent", "#66d6ff"))
-            user["last_seen"] = now()
         return _json(200, {"ok": True})
 
     if method == "POST" and path == "/api/friends/add":
@@ -181,10 +188,9 @@ def _route(method, path, query, body, remote_ip):
             return _json(400, {"ok": False, "error": "username required"})
         with LOCK:
             prune_queue()
-            user = get_user(username)
+            user = touch_user_presence(username)
             user["title"] = normalize_text(body.get("title", ""), "", 32)
             user["accent"] = normalize_color(body.get("accent", "#66d6ff"))
-            user["last_seen"] = now()
             if user["pending_match_id"]:
                 match = STATE["matches"].get(user["pending_match_id"])
                 if match:
@@ -228,6 +234,7 @@ def _route(method, path, query, body, remote_ip):
                 return _json(403, {"ok": False, "error": "unauthorized"})
             if match.get("quit_by"):
                 return _json(409, {"ok": False, "error": "match has ended"})
+            touch_user_presence(match["players"][player_key])
             if match["signature"] and previous_signature != match["signature"]:
                 STATE["stats"]["rejected_syncs"] += 1
                 return _json(409, {"ok": False, "error": "stale signature"})
@@ -264,6 +271,25 @@ def _route(method, path, query, body, remote_ip):
                 finalize_match(match, "death")
         return _json(200, {"ok": True, "seq": match["seq"], "signature": match["signature"], "replayId": match.get("replay_id")})
 
+    if method == "POST" and path.startswith("/api/matches/") and path.endswith("/presence"):
+        parts = path.strip("/").split("/")
+        match_id = parts[2]
+        player_key = body.get("playerKey", "")
+        token = body.get("token", "")
+        presence = sanitize_presence_payload(body.get("presence", {}))
+        if not is_safe_id(match_id, 8, 24) or player_key not in {"p1", "p2"} or not is_safe_token(token):
+            return _json(400, {"ok": False, "error": "invalid match credentials"})
+        with LOCK:
+            match = STATE["matches"].get(match_id)
+            if not match or match["tokens"].get(player_key) != token:
+                return _json(403, {"ok": False, "error": "unauthorized"})
+            if match.get("quit_by"):
+                return _json(409, {"ok": False, "error": "match has ended"})
+            touch_user_presence(match["players"][player_key])
+            match["presence"][player_key] = presence
+            match["updated_at"] = now()
+        return _json(200, {"ok": True})
+
     if method == "POST" and path.startswith("/api/matches/") and path.endswith("/reaction"):
         parts = path.strip("/").split("/")
         match_id = parts[2]
@@ -280,6 +306,7 @@ def _route(method, path, query, body, remote_ip):
                 return _json(403, {"ok": False, "error": "unauthorized"})
             if match.get("quit_by"):
                 return _json(409, {"ok": False, "error": "match has ended"})
+            touch_user_presence(match["players"][player_key])
             if message not in allowed_reactions:
                 return _json(400, {"ok": False, "error": "invalid reaction"})
             now_ts = now()
@@ -314,6 +341,7 @@ def _route(method, path, query, body, remote_ip):
                 return _json(403, {"ok": False, "error": "unauthorized"})
             if match.get("quit_by"):
                 return _json(409, {"ok": False, "error": "match has ended"})
+            touch_user_presence(match["players"][player_key])
             if not message:
                 return _json(400, {"ok": False, "error": "message required"})
             now_ts = now()
@@ -347,6 +375,7 @@ def _route(method, path, query, body, remote_ip):
             if not match or match["tokens"].get(player_key) != token:
                 return _json(403, {"ok": False, "error": "unauthorized"})
             match["quit_by"] = player_key
+            match["disconnect_winner"] = "p2" if player_key == "p1" else "p1"
             match["updated_at"] = now()
             release_match_players(match)
             replay_id = finalize_match(match, "quit")
