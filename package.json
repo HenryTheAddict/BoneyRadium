@@ -1,0 +1,72 @@
+{
+  "name": "boneyradium",
+  "productName": "BoneyRadium",
+  "version": "1.0.0",
+  "description": "A online version of BoneyPlays, the game I made for science, but with some improvements. For example, There are is a online mode, the performance is better, and its build on the radium network from radium.sbs!",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "build:mac": "electron-builder --mac dmg zip",
+    "build:win": "electron-builder --win zip",
+    "build:linux": "electron-builder --linux AppImage",
+    "build:all": "electron-builder --mac dmg zip --win zip --linux AppImage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HenryTheAddict/BoneyRadium.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/HenryTheAddict/BoneyRadium/issues"
+  },
+  "homepage": "https://github.com/HenryTheAddict/BoneyRadium#readme",
+  "dependencies": {
+    "peerjs": "^1.5.5"
+  },
+  "devDependencies": {
+    "electron": "^41.1.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "sbs.radium.boneyradium",
+    "productName": "BoneyRadium",
+    "files": [
+      "main.js",
+      "index.html",
+      "cardsData.js",
+      "phrasesData.js",
+      "favicon.png",
+      "Assets/**/*",
+      "server.py",
+      "passenger_wsgi.py"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "mac": {
+      "icon": "build/icon.png",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        "zip"
+      ]
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "target": [
+        "AppImage"
+      ],
+      "category": "Game"
+    }
+  }
+}

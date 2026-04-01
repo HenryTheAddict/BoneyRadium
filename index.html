@@ -1,0 +1,4657 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- Prevent pinch zoom on smartboards -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>BoneyRadium</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
+
+  <!-- Import Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: transparent;
+      --line: #e0e0e0;
+      --text: #111111;
+      --text-dim: #666666;
+      --surface: #f9f9f9;
+      --surface-2: rgba(255, 255, 255, 0.92);
+      --input-bg: #ffffff;
+      --overlay-bg: rgba(255, 255, 255, 0.8);
+      --panel-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      --p1-accent-rgb: 102, 214, 255;
+      --p2-accent-rgb: 255, 126, 169;
+      --active-accent-rgb: 102, 214, 255;
+    }
+
+    body[data-theme="dark"] {
+      --bg: rgba(9, 15, 28, 0.75);
+      --line: #33405b;
+      --text: #e8eefc;
+      --text-dim: #9faecc;
+      --surface: rgba(20, 31, 51, 0.92);
+      --surface-2: rgba(14, 23, 39, 0.94);
+      --input-bg: rgba(9, 15, 28, 0.9);
+      --overlay-bg: rgba(6, 10, 18, 0.78);
+      --panel-shadow: 0 18px 38px rgba(0,0,0,0.42);
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: "Inter", system-ui, -apple-system, sans-serif !important;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      background: radial-gradient(circle at center, #ffffff, #e6e6e6);
+      color: var(--text);
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    body[data-theme="dark"] {
+      background: radial-gradient(circle at center, #0f1829, #070d16);
+    }
+
+    /* Animated active player background tints */
+    body::before, body::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      pointer-events: none;
+      transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity: 0;
+    }
+
+    body::before {
+      background: radial-gradient(circle at 30% 30%, rgba(var(--p1-accent-rgb), 0.35) 0%, rgba(var(--p1-accent-rgb), 0.05) 80%);
+      animation: bgBreathe 8s ease-in-out infinite alternate;
+    }
+
+    body::after {
+      background: radial-gradient(circle at 70% 70%, rgba(var(--p2-accent-rgb), 0.35) 0%, rgba(var(--p2-accent-rgb), 0.05) 80%);
+      animation: bgBreathe 8s ease-in-out infinite alternate-reverse;
+    }
+
+    /* Setup Screen Spinning Gradient */
+    .setup-bg-gradient {
+      position: absolute;
+      inset: -50%;
+      z-index: -3;
+      background: conic-gradient(from 0deg, rgba(var(--p1-accent-rgb), 0.15) 0%, rgba(var(--p2-accent-rgb), 0.15) 50%, rgba(var(--p1-accent-rgb), 0.15) 100%);
+      animation: spinGradient 20s linear infinite;
+      transition: opacity 1.2s ease;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    body[data-screen="setup"] .setup-bg-gradient {
+      opacity: 1;
+    }
+
+    @keyframes spinGradient {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes bgBreathe {
+      0% { transform: scale(1); filter: brightness(1); }
+      100% { transform: scale(1.05); filter: brightness(1.2); }
+    }
+
+    /* Dramatic Turn Wave Expansion */
+    .turn-wave {
+      position: absolute;
+      width: 150vmax;
+      height: 150vmax;
+      border-radius: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      pointer-events: none;
+      z-index: -1;
+      opacity: 0.6;
+      transition: transform 1.2s cubic-bezier(0.19, 1, 0.22, 1), opacity 1.2s ease-out;
+    }
+    .turn-wave.animate {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 0;
+    }
+
+    body[data-active="p1"]::before { opacity: 1; }
+    body[data-active="p2"]::after { opacity: 1; }
+
+    /* Shae Theme Overrides */
+    body.shae-theme {
+      background: radial-gradient(circle at center, #2d003b, #0f0014);
+      --text: #fff0fc;
+      --text-dim: #d896ff;
+      --line: #702082;
+    }
+    body.shae-theme .health-bars {
+      background: rgba(45, 0, 59, 0.6);
+      border-bottom: 2px solid #a332c2;
+    }
+
+    /* Jurassic Theme Overrides */
+    body.jurassic-theme {
+      background: radial-gradient(circle at center, #1e3319, #0a1405);
+      --text: #e6ffcc;
+      --text-dim: #99cc66;
+      --line: #336600;
+    }
+    body.jurassic-theme .health-bars {
+      background: rgba(30, 51, 25, 0.6);
+      border-bottom: 2px solid #4d9900;
+    }
+
+    /* Tech Theme Overrides */
+    body.tech-theme {
+      background: radial-gradient(circle at center, #001f3f, #000000);
+      --text: #00ffcc;
+      --text-dim: #00cc99;
+      --line: #00664d;
+    }
+    body.tech-theme .health-bars {
+      background: rgba(0, 31, 63, 0.6);
+      border-bottom: 2px solid #00ffcc;
+    }
+
+    /* Art Theme Overrides */
+    body.art-theme {
+      background: radial-gradient(circle at center, #fff0f5, #e6f7ff);
+      --text: #ff0066;
+      --text-dim: #0066ff;
+      --line: #ffcc00;
+    }
+    body.art-theme .health-bars {
+      background: rgba(255, 240, 245, 0.6);
+      border-bottom: 2px solid #ff0066;
+    }
+
+    /* Basketball Theme Overrides */
+    body.basketball-theme {
+      background: radial-gradient(circle at center, #4d2600, #1a0d00);
+      --text: #ff9933;
+      --text-dim: #cc6600;
+      --line: #993300;
+    }
+    body.basketball-theme .health-bars {
+      background: rgba(77, 38, 0, 0.6);
+      border-bottom: 2px solid #ff6600;
+    }
+
+    /* TikTok Theme Overrides */
+    body.tiktok-theme {
+      background: radial-gradient(circle at center, #111111, #000000);
+      --text: #ffffff;
+      --text-dim: #69c9d0;
+      --line: #ee1d52;
+    }
+    body.tiktok-theme .health-bars {
+      background: rgba(17, 17, 17, 0.6);
+      border-bottom: 2px solid #69c9d0;
+    }
+
+    /* Flared Meat Theme Overrides */
+    body.flared-theme {
+      background: radial-gradient(circle at center, #4a1c1c, #1a0808);
+      --text: #ff9999;
+      --text-dim: #cc6666;
+      --line: #993333;
+    }
+    body.flared-theme .health-bars {
+      background: rgba(74, 28, 28, 0.6);
+      border-bottom: 2px solid #ff6666;
+    }
+
+    /* Stinky Man Theme Overrides */
+    body.stinky-theme {
+      background: radial-gradient(circle at center, #2e3b23, #0f140a);
+      --text: #a8c69f;
+      --text-dim: #7a966b;
+      --line: #4d6633;
+    }
+    body.stinky-theme .health-bars {
+      background: rgba(46, 59, 35, 0.6);
+      border-bottom: 2px solid #a8c69f;
+    }
+
+    /* Theodore Theme Overrides */
+    body.theo-theme {
+      background: linear-gradient(to bottom, #1a2a3a, #0d151c);
+      --text: #d4e6f1;
+      --text-dim: #8ab4f8;
+      --line: #3498db;
+    }
+    body.theo-theme .health-bars {
+      background: rgba(26, 42, 58, 0.7);
+      border-bottom: 2px solid #3498db;
+    }
+
+    .board {
+      height: 100dvh;
+      position: relative;
+      display: none;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .health-bars {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      padding: 1.5rem 3rem;
+      background: rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(10px);
+      border-bottom: 2px solid var(--line);
+      z-index: 20;
+    }
+
+    .health-bar-container {
+      width: 40%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .health-bar-container.right {
+      align-items: flex-end;
+    }
+
+    .health-label {
+      font-size: 1.5rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .health-track {
+      width: 100%;
+      height: 24px;
+      background: #eee;
+      border: 2px solid #000;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .health-trail {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: #e74c3c;
+      width: 100%; 
+      transition: width 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s; /* Slower, with a 0.5s delay so the main bar moves first */
+      z-index: 1;
+    }
+
+    .health-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%; 
+      transition: width 0.3s ease-out, background-color 0.3s ease; 
+      z-index: 2;
+    }
+
+    .health-high { background: #2ecc71; } /* Green */
+    .health-med { background: #f1c40f; }  /* Yellow */
+    .health-low { background: #e67e22; }  /* Orange/Red */
+
+    .health-fill.poisoned {
+      background: #9b59b6 !important; /* Purple for poison */
+      animation: pulsePoison 2s infinite;
+    }
+
+    @keyframes pulsePoison {
+      0% { opacity: 1; }
+      50% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+
+    .status-icons {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+    }
+
+    .poison-badge {
+      background: #9b59b6;
+      color: white;
+      font-size: 0.8rem;
+      font-weight: bold;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .player {
+      position: absolute;
+      inset: 0;
+      padding: 8rem 2rem 2rem; /* padding-top to clear health bars */
+      display: none; /* hidden by default */
+      flex-direction: column;
+      background: transparent;
+    }
+
+    .player.active {
+      display: flex;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: auto;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 1.8rem;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    .name-accent {
+      color: #111111;
+      -webkit-text-stroke: 0px; /* Removing stroke to stop internal glitches */
+      text-shadow:
+        -1px -1px 0 var(--name-accent, #ffffff),
+        1px -1px 0 var(--name-accent, #ffffff),
+        -1px 1px 0 var(--name-accent, #ffffff),
+        1px 1px 0 var(--name-accent, #ffffff),
+        0 0 12px var(--name-accent, #ffffff),
+        0 3px 10px rgba(0, 0, 0, 0.35);
+      letter-spacing: 0.02em;
+    }
+
+    @keyframes accentBreathe {
+      0% { opacity: 0.7; filter: blur(0px) saturate(1); }
+      50% { opacity: 1; filter: blur(3px) saturate(1.2); }
+      100% { opacity: 0.7; filter: blur(0px) saturate(1); }
+    }
+
+    .status {
+      margin: 0;
+      font-size: 1.2rem;
+      color: var(--text-dim);
+      min-height: 1.5rem;
+    }
+
+    .hand {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      padding-bottom: 2rem;
+      height: 350px; 
+    }
+
+    .card-container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      /* The container stays the visual size we want in the hand */
+      width: 140px; 
+      height: 200px;
+      perspective: 1000px;
+      /* We control the gap via margin instead of flex gap so we can transition it */
+      margin: 0 0.5rem;
+      transition: margin 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    /* When the hand is in 'smoosh' mode (a card is selected), we collapse the containers */
+    .hand.is-smooshed .card-container {
+      margin: 0 -30px; /* Pull them tightly together */
+    }
+    
+    /* But we leave the selected container wide so the big card has space to launch from */
+    .hand.is-smooshed .card-container.is-selected {
+      margin: 0 1rem;
+    }
+
+    .card {
+      /* Base size is massive so the browser renders a high-res texture */
+      width: 800px; 
+      height: 1143px; /* proportional to 140x200 */
+      padding: 0;
+      background: transparent;
+      border: none;
+      border-radius: 48px; /* scaled up border radius */
+      cursor: pointer;
+      transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+      position: absolute; 
+      /* Center the massive card exactly over its tiny container */
+      bottom: -471px; /* (1143 - 200) / 2 */
+      left: -330px; /* (800 - 140) / 2 */
+      z-index: 1;
+      transform-origin: center center;
+      transform: scale(var(--hand-card-scale, 0.175));
+      will-change: transform;
+    }
+
+    /* Animation for shuffling cards in (ONLY USED AT START) */
+    .shuffle-in {
+      animation: weirdShuffle 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    @keyframes weirdShuffle {
+      0% {
+        transform: translate(200px, -300px) rotate(45deg) scale(0.05);
+        opacity: 0;
+      }
+      50% {
+        transform: translate(-50px, -100px) rotate(-15deg) scale(0.2);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(0, 0) scale(var(--hand-card-scale, 0.175));
+        opacity: 1;
+      }
+    }
+
+    /* Animation for cards sliding away when turn ends */
+    .slide-away {
+      animation: slideDown 0.4s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards;
+    }
+
+    @keyframes slideDown {
+      0% {
+        transform: translate(0, 0) scale(var(--hand-card-scale, 0.175));
+        opacity: 1;
+      }
+      100% {
+        transform: translate(0, 300px) scale(var(--hand-card-scale, 0.175)) rotate(10deg);
+        opacity: 0;
+      }
+    }
+
+    .card img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      border-radius: 48px;
+      filter: drop-shadow(0 20px 40px rgba(0,0,0,0.2));
+      pointer-events: none;
+      transition: filter 0.4s ease;
+      will-change: filter;
+    }
+
+    .card.is-selected {
+      z-index: 10;
+      /* Transform handled by JS */
+    }
+
+    .card.is-selected img {
+      filter: drop-shadow(0 60px 100px rgba(0,0,0,0.5));
+    }
+
+    .player {
+      transition: opacity 0.5s ease, filter 0.5s ease;
+    }
+
+    /* We don't need the inactive class anymore since they are completely hidden */
+    .player.inactive {
+      display: none;
+    }
+
+    #start-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 100;
+      background-color: #000;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .slideshow-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: translateX(100%);
+      transition: transform 1.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+      will-change: transform;
+    }
+
+    .slideshow-img.active {
+      transform: translateX(0);
+    }
+
+    .slideshow-img.exit {
+      transform: translateX(-100%);
+    }
+
+    .tap-to-play {
+      position: absolute;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 3rem;
+      font-weight: bold;
+      color: white;
+      text-transform: uppercase;
+      text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+      animation: blinkText 1.5s infinite;
+      user-select: none;
+      width: 100%;
+      text-align: center;
+      z-index: 105; /* Above slideshow */
+    }
+
+    @keyframes blinkText {
+      0% { opacity: 1; }
+      50% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    #turn-banner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 4rem;
+      font-weight: bold;
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 2rem 4rem;
+      border-radius: 20px;
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .show-banner {
+      animation: flashBanner 2s ease-in-out forwards;
+    }
+
+    @keyframes flashBanner {
+      0% { opacity: 0; transform: translate(-50%, -40%); }
+      15% { opacity: 1; transform: translate(-50%, -50%); }
+      85% { opacity: 1; transform: translate(-50%, -50%); }
+      100% { opacity: 0; transform: translate(-50%, -60%); }
+    }
+
+    #name-setup {
+      position: absolute;
+      inset: 0;
+      background: var(--bg);
+      z-index: 110; /* Above start screen */
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+    }
+
+    .setup-box {
+      background: var(--surface);
+      padding: 1.5rem;
+      border-radius: 18px;
+      border: 2px solid var(--line);
+      box-shadow: var(--panel-shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      width: min(860px, 94vw);
+    }
+
+    .setup-inputs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      justify-content: center;
+    }
+
+    .setup-box h2 {
+      margin: 0;
+      font-size: 2rem;
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      flex: 1;
+    }
+
+    .input-group label {
+      font-weight: bold;
+      color: var(--text-dim);
+    }
+
+    .input-group input {
+      padding: 0.8rem;
+      font-size: 1.5rem;
+      border: 2px solid var(--line);
+      border-radius: 8px;
+      outline: none;
+      text-align: center;
+      background: var(--input-bg);
+      color: var(--text);
+    }
+
+    .input-group input::placeholder {
+      color: #9a9a9a;
+    }
+
+    .input-group input:focus {
+      border-color: #000;
+      background: color-mix(in oklab, var(--input-bg) 80%, rgba(var(--active-accent-rgb), 0.2));
+    }
+
+    /* Mesmerizing VIP Name Input Animation */
+    .vip-input-effect {
+      animation: vipPulse 2s linear infinite, vipFloat 3s ease-in-out infinite;
+      color: transparent !important;
+      background: linear-gradient(90deg, #ff007f, #7f00ff, #007fff, #00ffff, #00ff7f, #7fff00, #ffff00, #ff7f00, #ff0000) !important;
+      background-size: 400% 400% !important;
+      -webkit-background-clip: text !important;
+      background-clip: text !important;
+      text-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.4) !important;
+      border-color: #7f00ff !important;
+      box-shadow: 0 0 30px rgba(127, 0, 255, 0.5), inset 0 0 20px rgba(127, 0, 255, 0.3) !important;
+      font-weight: 900 !important;
+      letter-spacing: 2px !important;
+      transform-origin: center;
+    }
+
+    @keyframes vipPulse {
+      0% { background-position: 0% 50%; filter: hue-rotate(0deg); }
+      100% { background-position: 400% 50%; filter: hue-rotate(360deg); }
+    }
+
+    @keyframes vipFloat {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-5px) scale(1.03); }
+    }
+
+    .setup-options {
+      display: flex;
+      justify-content: center;
+      margin-top: -0.25rem;
+    }
+
+    .silent-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      user-select: none;
+    }
+
+    .silent-toggle input {
+      width: 1.1rem;
+      height: 1.1rem;
+      cursor: pointer;
+    }
+
+    .color-pickers {
+      display: flex;
+      gap: 2rem;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .color-picker-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .color-picker-label {
+      color: var(--text-dim);
+      font-weight: 700;
+      text-align: center;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .color-picker {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.6rem;
+    }
+
+    .color-chip {
+      height: 34px;
+      border-radius: 10px;
+      border: 2px solid rgba(0, 0, 0, 0.16);
+      background-color: var(--chip-color);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .color-chip:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+    }
+
+    .color-chip.selected {
+      border-color: #111;
+      box-shadow:
+        0 0 0 3px rgba(255, 255, 255, 0.95),
+        0 0 0 5px var(--chip-color),
+        0 10px 20px rgba(0, 0, 0, 0.24);
+      transform: translateY(-1px) scale(1.02);
+    }
+
+    .color-chip.taken {
+      opacity: 0.2;
+      cursor: not-allowed;
+      transform: scale(0.85);
+      filter: grayscale(0.8);
+      box-shadow: none;
+      border-color: transparent;
+    }
+
+    @keyframes colorPop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+      100% { transform: scale(1.02); }
+    }
+    .color-chip.pop {
+      animation: colorPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    /* On-Screen Keyboard Removed */
+
+    #start-game-btn {
+      padding: 1rem;
+      font-size: 1.2rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      background: #000;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+
+    #start-game-btn:active {
+      background: #333;
+    }
+
+    #setup-back-btn {
+      padding: 0.95rem;
+      font-size: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: transparent;
+      color: var(--text-dim);
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 0.4rem;
+    }
+
+    #dev-options {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: #333;
+      color: #0f0;
+      padding: 1rem;
+      border-radius: 8px;
+      font-family: monospace;
+      z-index: 200;
+      display: none;
+    }
+
+    /* Action Selection & Trivia Overlay */
+    #action-overlay, #trivia-overlay, #settings-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--overlay-bg);
+      z-index: 120;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      backdrop-filter: blur(5px);
+    }
+    
+    #settings-overlay {
+      z-index: 400; /* above everything */
+    }
+
+    .modal-box {
+      background: var(--surface-2);
+      padding: 1.5rem;
+      border-radius: 18px;
+      border: 4px solid var(--line);
+      box-shadow: var(--panel-shadow);
+      text-align: center;
+      max-width: min(92vw, 720px);
+      width: 100%;
+      backdrop-filter: blur(10px);
+      color: var(--text);
+    }
+
+    .modal-box h2 {
+      font-size: 2.5rem;
+      margin-top: 0;
+      margin-bottom: 1rem;
+    }
+    
+    .modal-box p {
+      font-size: 1.5rem;
+      color: var(--text-dim);
+      margin-bottom: 2rem;
+    }
+
+    #trivia-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      width: 100%;
+    }
+
+    .action-btn {
+      display: block;
+      width: 100%;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+      font-weight: bold;
+      background: #f0f0f0;
+      color: #111;
+      border: 2px solid #ccc;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .trivia-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: white;
+      border: 4px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 6px 0 rgba(0,0,0,0.2);
+      min-height: 120px;
+    }
+
+    /* Kahoot Colors */
+    .trivia-btn:nth-child(1) { background-color: #e21b3c; } /* Red */
+    .trivia-btn:nth-child(2) { background-color: #1368ce; } /* Blue */
+    .trivia-btn:nth-child(3) { background-color: #d89e00; } /* Yellow */
+    .trivia-btn:nth-child(4) { background-color: #26890c; } /* Green */
+
+    .action-btn:hover, .trivia-btn:hover {
+      filter: brightness(1.1);
+      transform: scale(1.02);
+    }
+    
+    .action-btn:active, .trivia-btn:active {
+      transform: translateY(4px);
+      box-shadow: none;
+    }
+
+    .gamepad-focus {
+      outline: 4px solid rgba(var(--active-accent-rgb), 0.95);
+      outline-offset: 3px;
+      box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.8);
+    }
+
+    .matchmaking-panel {
+      margin-top: 1rem;
+      padding: 1.2rem;
+      border: 2px solid var(--line);
+      border-radius: 14px;
+      text-align: center;
+      display: none;
+      background: linear-gradient(140deg, color-mix(in oklab, var(--surface) 88%, rgba(var(--p1-accent-rgb), 0.1)), color-mix(in oklab, var(--surface) 86%, rgba(var(--p2-accent-rgb), 0.1)));
+      box-shadow: var(--panel-shadow);
+      gap: 0.75rem;
+      flex-direction: column;
+    }
+
+    .matchmaking-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 0.6rem;
+    }
+
+    .matchmaking-btn {
+      border-radius: 999px;
+      border: 2px solid var(--line);
+      background: var(--surface-2);
+      color: var(--text);
+      font-weight: 700;
+      padding: 0.65rem 1.1rem;
+      cursor: pointer;
+    }
+
+    .online-friends-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-height: 140px;
+      overflow-y: auto;
+      text-align: left;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.55rem;
+      background: color-mix(in oklab, var(--surface-2) 90%, transparent);
+    }
+
+    .online-chat-panel {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: color-mix(in oklab, var(--surface-2) 92%, transparent);
+      padding: 0.55rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      min-height: 160px;
+    }
+
+    .online-chat-log {
+      flex: 1;
+      max-height: 130px;
+      overflow-y: auto;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      padding-right: 0.2rem;
+    }
+
+    .online-chat-row {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.35rem 0.5rem;
+      font-size: 0.9rem;
+      background: color-mix(in oklab, var(--surface) 94%, transparent);
+      word-break: break-word;
+    }
+
+    .online-chat-composer {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .online-chat-input {
+      flex: 1;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0.45rem 0.7rem;
+      background: var(--input-bg);
+      color: var(--text);
+      outline: none;
+    }
+
+    .reaction-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      justify-content: center;
+      margin-top: 0.35rem;
+    }
+
+    .reaction-btn {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 0.4rem 0.8rem;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    .reaction-btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+    }
+
+    #online-match-controls {
+      position: absolute;
+      right: 16px;
+      top: 86px;
+      z-index: 165;
+      display: none;
+      flex-direction: column;
+      gap: 0.45rem;
+      background: color-mix(in oklab, var(--surface-2) 92%, transparent);
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      padding: 0.55rem;
+      box-shadow: var(--panel-shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    #super-menu > div,
+    #profile-menu > div,
+    #settings-box {
+      width: min(860px, 94vw);
+      border-radius: 18px;
+      padding: 1.5rem;
+      box-sizing: border-box;
+    }
+
+    #profile-menu input,
+    #profile-menu select,
+    #settings-box input,
+    #settings-box select {
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 920px) {
+      .health-bars {
+        padding: 1rem;
+      }
+      .health-label {
+        font-size: 1rem;
+      }
+      .setup-inputs {
+        grid-template-columns: 1fr;
+      }
+      .modal-box h2 {
+        font-size: 1.7rem;
+      }
+      #turn-banner {
+        font-size: 2rem;
+        padding: 1rem 1.4rem;
+      }
+      .player {
+        padding: 6.2rem 1rem 1rem;
+      }
+    }
+
+    .trivia-btn.correct {
+      border-color: #fff;
+      filter: brightness(1.2);
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(255,255,255,0.8);
+      z-index: 10;
+    }
+
+    .trivia-btn.wrong {
+      opacity: 0.3;
+      filter: grayscale(0.8);
+    }
+
+    #trivia-timer-container {
+      width: 100%;
+      height: 24px;
+      background: #eee;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      overflow: hidden;
+      border: 2px solid #ccc;
+    }
+
+    #trivia-timer-bar {
+      height: 100%;
+      width: 100%;
+      background: #333;
+      transition: width 0.1s linear, background-color 0.3s;
+    }
+
+    /* Game Over / Death Styles */
+    #game-over-screen {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      z-index: 300;
+      display: none;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      opacity: 0;
+      transition: opacity 1s ease;
+      overflow: hidden;
+    }
+
+    .game-over-text-content {
+      z-index: 310; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .winner-slides-container {
+      z-index: 310;
+      width: 40%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      border-left: 4px solid #f1c40f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 0;
+      overflow-y: auto;
+      gap: 2rem;
+      box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+    }
+
+    .winner-slides-title {
+      font-size: 2rem;
+      color: #f1c40f;
+      text-transform: uppercase;
+      font-weight: bold;
+      margin-bottom: 1rem;
+      flex-shrink: 0;
+    }
+
+    .winner-card-slide {
+      width: 280px; /* 140 * 2 */
+      height: 400px; /* 200 * 2 */
+      flex-shrink: 0;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      animation: slideInRight 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+    }
+
+    .winner-card-slide img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: transparent;
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));
+    }
+
+    @keyframes slideInRight {
+      0% { transform: translateX(100%) rotate(10deg); opacity: 0; }
+      100% { transform: translateX(0) rotate(0); opacity: 1; }
+    }
+
+    #confetti-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 305;
+      pointer-events: none;
+    }
+
+    .death-anim {
+      animation: deathFall 2s cubic-bezier(0.5, 0, 0.5, 1) forwards;
+      pointer-events: none;
+    }
+
+    @keyframes deathFall {
+      0% { filter: grayscale(0) sepia(0); transform: scale(1); }
+      20% { filter: grayscale(1) sepia(1) hue-rotate(-50deg); transform: scale(1.05) rotate(-2deg); }
+      30% { transform: scale(1.05) rotate(2deg); }
+      40% { transform: scale(1.05) rotate(-2deg); }
+      100% { filter: grayscale(1) sepia(1) hue-rotate(-50deg); transform: translateY(100vh) rotate(20deg) scale(0.5); opacity: 0; }
+    }
+
+    #battle-log {
+      position: absolute;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 1rem 2rem;
+      border-radius: 10px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      z-index: 150;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    
+    #oney-bg-video {
+      position: absolute;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      pointer-events: none;
+      z-index: -1;
+      display: none;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <!-- OneyPlays Video Background -->
+  <video id="oney-bg-video" src="Assets/Other/UI/Oney.mp4" playsinline></video>
+
+  <div id="start-screen">
+    <div id="slideshow-container"></div>
+    <div class="tap-to-play">Tap to Play</div>
+  </div>
+  <div id="player-accent-overlay" style="position: absolute; inset: 0; pointer-events: none; z-index: 1; mix-blend-mode: screen; background:
+    radial-gradient(circle at 12% 25%, rgba(var(--p1-accent-rgb), 0.22) 0%, rgba(var(--p1-accent-rgb), 0) 42%),
+    radial-gradient(circle at 86% 72%, rgba(var(--p2-accent-rgb), 0.2) 0%, rgba(var(--p2-accent-rgb), 0) 44%),
+    radial-gradient(circle at 50% 50%, rgba(var(--active-accent-rgb), 0.14) 0%, rgba(var(--active-accent-rgb), 0) 58%);
+    animation: accentBreathe 8s ease-in-out infinite;"></div>
+
+  <div id="super-menu" style="display: none; position: absolute; inset: 0; z-index: 105; background: var(--bg); flex-direction: column; align-items: center; justify-content: center; gap: 2rem;">
+    <h1 style="font-size: 5rem; color: var(--p1-accent-rgb); text-shadow: 0 4px 10px rgba(0,0,0,0.1); margin: 0;">BoneyRadium</h1>
+    <div style="display: flex; flex-direction: column; gap: 1.5rem; width: 400px; background: var(--surface); padding: 2rem; border-radius: 16px; border: 2px solid var(--line); box-shadow: var(--panel-shadow);">
+      <button class="action-btn" id="menu-local-btn" style="padding: 1rem; font-size: 1.5rem; width: 100%;">Local Match</button>
+      <button class="action-btn" id="menu-online-btn" style="padding: 1rem; font-size: 1.5rem; width: 100%;">Online Match</button>
+      <button class="action-btn" id="menu-profile-btn" style="padding: 1rem; font-size: 1.5rem; width: 100%;">Profile & Unlocks</button>
+      <button class="action-btn" id="menu-settings-btn" style="padding: 1rem; font-size: 1.5rem; width: 100%;">Settings</button>
+    </div>
+  </div>
+
+  <div id="profile-menu" style="display: none; position: absolute; inset: 0; z-index: 110; background: var(--bg); flex-direction: column; align-items: center; justify-content: center; gap: 2rem;">
+    <h2 style="font-size: 3rem; margin: 0;">Profile</h2>
+    <div style="background: var(--surface); padding: 2rem; border-radius: 16px; border: 2px solid var(--line); box-shadow: var(--panel-shadow); width: 600px; max-width: 90vw;">
+      <label style="font-weight: bold; color: var(--text-dim);">Username:</label>
+      <input type="text" id="profile-username" style="width: 100%; padding: 0.8rem; font-size: 1.2rem; margin-top: 0.5rem; margin-bottom: 1.5rem; border-radius: 8px; border: 2px solid var(--line);" />
+      
+      <label style="font-weight: bold; color: var(--text-dim);">Stats:</label>
+      <p style="font-size: 1.2rem; margin-top: 0.5rem; margin-bottom: 1.5rem;">Wins: <span id="profile-wins">0</span> | Games Played: <span id="profile-games">0</span></p>
+
+      <label style="font-weight: bold; color: var(--text-dim);">Equipped Title:</label>
+      <select id="profile-title" style="width: 100%; padding: 0.8rem; font-size: 1.2rem; margin-top: 0.5rem; margin-bottom: 1.5rem; border-radius: 8px; border: 2px solid var(--line);">
+        <option value="">None</option>
+        <option value="Novice" id="title-novice" disabled>Novice (Unlock at 5 wins)</option>
+        <option value="Bone Collector" id="title-bone" disabled>Bone Collector (Unlock at 10 wins)</option>
+        <option value="Radium Master" id="title-radium" disabled>Radium Master (Unlock at 25 wins)</option>
+      </select>
+      <label style="font-weight: bold; color: var(--text-dim);">Profile Accent:</label>
+      <input type="color" id="profile-accent" value="#66d6ff" style="width: 100%; height: 3rem; margin-top: 0.5rem; margin-bottom: 1.5rem; border-radius: 8px; border: 2px solid var(--line); background: var(--input-bg);" />
+      <label style="font-weight: bold; color: var(--text-dim);">Friends:</label>
+      <div style="display: flex; gap: 0.75rem; margin-top: 0.5rem; margin-bottom: 1rem;">
+        <input type="text" id="friend-username" placeholder="Add friend by username" style="flex: 1; padding: 0.8rem; font-size: 1rem; border-radius: 8px; border: 2px solid var(--line);" />
+        <button class="action-btn" id="add-friend-btn" style="width: auto; padding: 0.8rem 1.2rem;">Add</button>
+      </div>
+      <div id="friend-list" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 180px; overflow-y: auto;"></div>
+    </div>
+    <button class="action-btn" id="close-profile-btn" style="padding: 1rem 2rem; font-size: 1.2rem;">Back to Menu</button>
+  </div>
+  
+  <div id="name-setup">
+    <div class="setup-box">
+      <h2>Enter Players</h2>
+      <div class="setup-inputs">
+        <div class="input-group">
+          <label for="p1-display-name">Player 1 Name</label>
+          <input type="text" id="p1-display-name" readonly />
+        </div>
+        <div class="input-group">
+          <label for="p2-name">Player 2 Name</label>
+          <input type="text" id="p2-name" placeholder="Player 2" />
+        </div>
+      </div>
+      <div id="multiplayer-ui" class="matchmaking-panel">
+        <h3 style="margin-top: 0; margin-bottom: 0.2rem;">Server Matchmaking</h3>
+        <p style="margin: 0.2rem 0;">Server: <span id="active-server-label" style="font-weight: bold; user-select: text;">https://boney.radium.sbs</span></p>
+        <p id="matchmaking-status" style="color: var(--text-dim); font-weight: bold; min-height: 1.5rem; margin:0;">Ready to queue.</p>
+        <div class="matchmaking-actions">
+          <button id="find-match-btn" class="matchmaking-btn">Find Match</button>
+          <button id="cancel-match-btn" class="matchmaking-btn">Cancel Search</button>
+          <button id="refresh-friends-btn" class="matchmaking-btn">Refresh Friends</button>
+          <button id="quit-match-btn" class="matchmaking-btn" disabled>Quit Match</button>
+        </div>
+        <div class="reaction-strip" id="reaction-strip">
+          <button class="reaction-btn" data-reaction="🔥">🔥</button>
+          <button class="reaction-btn" data-reaction="💀">💀</button>
+          <button class="reaction-btn" data-reaction="😅">😅</button>
+          <button class="reaction-btn" data-reaction="👏">👏</button>
+          <button class="reaction-btn" data-reaction="😈">😈</button>
+        </div>
+        <div class="online-chat-panel">
+          <div id="online-chat-log" class="online-chat-log"></div>
+          <div class="online-chat-composer">
+            <input id="online-chat-input" class="online-chat-input" type="text" maxlength="120" placeholder="Type message..." />
+            <button id="online-chat-send-btn" class="matchmaking-btn">Send</button>
+          </div>
+        </div>
+        <div class="online-chat-composer" style="margin-top: 0.35rem;">
+          <input id="server-replay-id-input" class="online-chat-input" type="text" placeholder="Replay ID" />
+          <button id="load-server-replay-btn" class="matchmaking-btn">Load Replay</button>
+        </div>
+        <p style="margin: 0.55rem 0 0.2rem; font-weight: bold;">Online Friends</p>
+        <div id="matchmaking-friends" class="online-friends-panel"></div>
+      </div>
+      <div class="setup-options">
+        <label class="silent-toggle" for="silent-mode-toggle">
+          <input type="checkbox" id="silent-mode-toggle" />
+          Silent Mode
+        </label>
+        <div class="game-length-selector" style="display: flex; align-items: center; gap: 0.5rem; margin-left: 2rem;">
+          <label for="game-length" style="font-weight: bold; color: var(--text-dim);">Game Length:</label>
+          <select id="game-length" style="padding: 0.3rem; border-radius: 4px; font-size: 1rem;">
+            <option value="500">Normal (500 HP)</option>
+            <option value="750">Long (750 HP)</option>
+            <option value="1000">Longer (1000 HP)</option>
+            <option value="2500">Longest (2500 HP, 5 Cards)</option>
+          </select>
+        </div>
+      </div>
+      <div class="color-pickers">
+        <div class="color-picker-group">
+          <div class="color-picker-label">Player 1 Color</div>
+          <div class="color-picker" id="p1-color-picker"></div>
+        </div>
+        <div class="color-picker-group">
+          <div class="color-picker-label">Player 2 Color</div>
+          <div class="color-picker" id="p2-color-picker"></div>
+        </div>
+      </div>
+      
+      <!-- Virtual Keyboard Removed -->
+      <button id="start-game-btn" style="margin-top: 1.5rem; padding: 1rem; font-size: 1.5rem; background: var(--p1-accent-rgb); color: white; border: none; border-radius: 8px; cursor: pointer; width: 100%; transition: opacity 0.3s; font-weight: bold;">Start Game</button>
+      <button id="setup-back-btn">Back</button>
+    </div>
+  </div>
+
+  <div id="turn-banner"></div>
+  <div id="dev-options">
+    <h3>Developer Options</h3>
+    <p>Debug info will go here.</p>
+    <button onclick="document.getElementById('dev-options').style.display='none'">Close</button>
+  </div>
+
+  <div id="battle-log"></div>
+  <div id="online-match-controls">
+    <div class="reaction-strip" id="reaction-strip-live">
+      <button class="reaction-btn" data-reaction="🔥">🔥</button>
+      <button class="reaction-btn" data-reaction="💀">💀</button>
+      <button class="reaction-btn" data-reaction="😅">😅</button>
+      <button class="reaction-btn" data-reaction="👏">👏</button>
+      <button class="reaction-btn" data-reaction="😈">😈</button>
+    </div>
+    <div id="online-chat-log-live" class="online-chat-log" style="max-height: 96px; min-width: 220px;"></div>
+    <div class="online-chat-composer">
+      <input id="online-chat-input-live" class="online-chat-input" type="text" maxlength="120" placeholder="Chat..." />
+      <button id="online-chat-send-btn-live" class="matchmaking-btn">Send</button>
+    </div>
+    <button id="quit-match-btn-live" class="matchmaking-btn">Quit Match</button>
+  </div>
+
+  <div id="action-overlay">
+    <div class="modal-box" id="action-box">
+      <h2>Choose Action</h2>
+      <div id="action-list"></div>
+      <button class="action-btn" id="cancel-action-btn" style="background: #ffcccc; margin-top: 2rem;">Cancel</button>
+    </div>
+  </div>
+
+  <div id="trivia-overlay">
+    <div class="modal-box" id="trivia-box" style="width: 800px; max-width: 95vw;">
+      <h2 id="trivia-title">Trivia!</h2>
+      <div id="trivia-timer-container"><div id="trivia-timer-bar"></div></div>
+      <p id="trivia-question" style="font-size: 2rem; font-weight: bold;"></p>
+      <div id="trivia-options"></div>
+    </div>
+  </div>
+
+  <div id="settings-overlay">
+    <div class="modal-box" id="settings-box">
+      <h2>Settings</h2>
+      <div class="input-group" style="margin-bottom: 1.5rem; text-align: left;">
+        <label for="music-volume">Music Volume</label>
+        <input type="range" id="music-volume" min="0" max="100" step="1" value="50" style="width: 100%;">
+      </div>
+      <div class="input-group" style="margin-bottom: 1.5rem; text-align: left;">
+        <label for="sfx-volume">SFX Volume</label>
+        <input type="range" id="sfx-volume" min="0" max="100" step="1" value="80" style="width: 100%;">
+      </div>
+      <div class="input-group" style="margin-bottom: 1.5rem; text-align: left; flex-direction: row; align-items: center; gap: 1rem;">
+        <input type="checkbox" id="performance-mode" style="width: 1.5rem; height: 1.5rem; cursor: pointer;">
+        <label for="performance-mode" style="margin: 0; cursor: pointer;">Performance Mode (Disable Background Particles)</label>
+      </div>
+      <div class="input-group" style="margin-bottom: 1.5rem; text-align: left; flex-direction: row; align-items: center; gap: 1rem;">
+        <input type="checkbox" id="dark-mode-toggle" style="width: 1.5rem; height: 1.5rem; cursor: pointer;">
+        <label for="dark-mode-toggle" style="margin: 0; cursor: pointer;">Dark Mode</label>
+      </div>
+      <div class="input-group" style="margin-bottom: 1.5rem; text-align: left;">
+        <label for="custom-server-url">Custom Server</label>
+        <input type="url" id="custom-server-url" placeholder="https://boney.radium.sbs" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 2px solid var(--line);">
+      </div>
+      <div class="input-group" style="margin-bottom: 1.5rem; text-align: left;">
+        <label for="anti-cheat-toggle">Strict Anti-Cheat</label>
+        <select id="anti-cheat-toggle" style="width: 100%; padding: 0.85rem; border-radius: 8px; border: 2px solid var(--line);">
+          <option value="strict">Strict</option>
+          <option value="normal">Normal</option>
+        </select>
+      </div>
+      <button class="action-btn" id="open-server-stats-btn">Open Server Stats</button>
+      <button class="action-btn" id="close-settings-btn" style="margin-top: 2rem;">Close Settings</button>
+    </div>
+  </div>
+
+  <div id="game-over-screen">
+    <canvas id="confetti-canvas"></canvas>
+    <div class="game-over-text-content">
+      <h1 id="winner-text" style="font-size: 5rem; margin-bottom: 1rem; color: #f1c40f; text-shadow: 0 4px 10px rgba(0,0,0,0.5);">Player 1 Wins!</h1>
+      <p id="loser-text" style="font-size: 2rem; margin-bottom: 3rem; color: #ccc;">Player 2 has turned to dust...</p>
+      <button id="watch-replay-btn" class="action-btn" style="width: auto; padding: 1rem 2.2rem; font-size: 1.35rem; margin: 0 auto 1rem; background: #dff2ff; color: #0d2037; border-color: #9bc8f4;">Watch Replay</button>
+      <button id="play-again-btn" onclick="location.reload()" class="action-btn" style="width: auto; padding: 1.5rem 4rem; font-size: 2rem; background: #fff; color: #000; box-shadow: 0 10px 30px rgba(255,255,255,0.2); transition: opacity 0.5s ease;">Play Again</button>
+    </div>
+    <div class="winner-slides-container" id="winner-slides">
+      <div class="winner-slides-title">Winning Hand</div>
+      <!-- Cards injected via JS -->
+    </div>
+  </div>
+
+  <div id="replay-overlay" style="display:none; position:absolute; inset:0; z-index:500; background: rgba(6,20,36,0.82); backdrop-filter: blur(10px);">
+    <div style="position:absolute; top: 24px; left: 50%; transform: translateX(-50%); width:min(860px, 92vw); background: rgba(245,250,255,0.95); border: 2px solid var(--line); border-radius: 18px; box-shadow: 0 22px 46px rgba(0,0,0,0.32); padding: 1.2rem 1.4rem;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:0.8rem; margin-bottom: 0.8rem;">
+        <h3 style="margin:0; font-size:1.35rem;">Game Replay</h3>
+        <div id="replay-step-label" style="font-weight:700; color: var(--text-dim);">Step 1</div>
+      </div>
+      <div style="display:flex; gap:0.65rem; flex-wrap: wrap;">
+        <button id="replay-prev-btn" class="action-btn" style="margin:0; width:auto; padding:0.65rem 1rem; font-size:1rem;">Prev</button>
+        <button id="replay-play-btn" class="action-btn" style="margin:0; width:auto; padding:0.65rem 1rem; font-size:1rem;">Play</button>
+        <button id="replay-next-btn" class="action-btn" style="margin:0; width:auto; padding:0.65rem 1rem; font-size:1rem;">Next</button>
+        <button id="replay-close-btn" class="action-btn" style="margin:0; width:auto; padding:0.65rem 1rem; font-size:1rem; margin-left:auto;">Close Replay</button>
+      </div>
+      <p id="replay-caption" style="margin: 0.9rem 0 0; color:#2a3d55; font-weight:600;">Replay loaded.</p>
+    </div>
+  </div>
+
+  <!-- Rainbow background canvas behind the board -->
+  <canvas id="bg-particles" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1;"></canvas>
+
+  <main class="board" id="board"></main>
+
+  <script src="phrasesData.js"></script>
+  <script src="cardsData.js"></script>
+  <script>
+    // --- Audio System ---
+    let isPerformanceMode = false;
+    let isDarkMode = localStorage.getItem('boneyDarkMode') === '1';
+    window.serverConfig = {
+      baseUrl: (localStorage.getItem('boneyServerUrl') || 'https://boney.radium.sbs').replace(/\/$/, ''),
+      antiCheat: localStorage.getItem('boneyAntiCheatMode') || 'strict'
+    };
+
+    const applyThemeMode = () => {
+      if (isDarkMode) {
+        document.body.setAttribute('data-theme', 'dark');
+      } else {
+        document.body.removeAttribute('data-theme');
+      }
+    };
+    
+    const audioSystem = {
+      musicVolume: 0.5,
+      sfxVolume: 0.8,
+      silentMode: false,
+      isShaePlaying: false,
+      currentMusicIndex: 0,
+      musicQueue: [],
+      musicPlayer: new Audio(),
+      musicTracks: [
+        'Assets/Audio/Music/squire.wav',
+        'Assets/Audio/Music/think.wav',
+        'Assets/Audio/Music/cards.wav',
+        'Assets/Audio/Music/chance.wav',
+        'Assets/Audio/Music/shuffle.wav',
+        'Assets/Audio/Music/chef.wav',
+        'Assets/Audio/Music/loops.wav',
+        'Assets/Audio/Music/Pibbles.wav'
+      ],
+      shaeTrack: 'Assets/Audio/Music/omgilts.wav',
+      sounds: {
+        popin: new Audio('Assets/Audio/Sounds/Popin.wav'),
+        slide: new Audio('Assets/Audio/Sounds/slide.wav'),
+        punch: new Audio('Assets/Audio/Sounds/Punchin.wav'),
+        heal: new Audio('Assets/Audio/Sounds/Heal.wav'),
+        fail: new Audio('Assets/Audio/Sounds/Attack fail.wav'),
+        trivcorrect: new Audio('Assets/Audio/Sounds/trivcorrect.wav'),
+        trivwrong: new Audio('Assets/Audio/Sounds/trivwrong.wav'),
+        uiCardActions: new Audio('Assets/Audio/Sounds/UiCardActions.wav'),
+        win: new Audio('Assets/Audio/Sounds/win.wav'),
+        trivstart: new Audio('Assets/Audio/Sounds/trivstart.wav')
+      },
+      init() {
+        this.loadSettings();
+        this.shuffleMusicQueue();
+        
+        // Listen for when a song ends to play the next one
+        this.musicPlayer.addEventListener('ended', () => {
+          this.playNextSong();
+        });
+        
+        this.updateVolumes();
+        
+        // Pre-load audio to prevent playback delays/issues
+        for (let key in this.sounds) {
+          this.sounds[key].load();
+        }
+        
+        // Pre-load all music tracks
+        this.musicTracks.forEach(track => {
+          const a = new Audio();
+          a.src = track;
+          a.load();
+        });
+        const shaeAudio = new Audio();
+        shaeAudio.src = this.shaeTrack;
+        shaeAudio.load();
+
+        // Apply performance mode initially
+        const canvas = document.getElementById('bg-particles');
+        if (canvas) {
+          canvas.style.display = isPerformanceMode ? 'none' : 'block';
+        }
+      },
+      saveSettings() {
+        localStorage.setItem('boneyMusicVolume', this.musicVolume);
+        localStorage.setItem('boneySfxVolume', this.sfxVolume);
+        localStorage.setItem('boneySilentMode', this.silentMode ? '1' : '0');
+        localStorage.setItem('boneyPerformanceMode', isPerformanceMode ? '1' : '0');
+        localStorage.setItem('boneyServerUrl', window.serverConfig?.baseUrl || 'https://boney.radium.sbs');
+        localStorage.setItem('boneyAntiCheatMode', window.serverConfig?.antiCheat || 'strict');
+        localStorage.setItem('boneyDarkMode', isDarkMode ? '1' : '0');
+      },
+      loadSettings() {
+        const savedMusic = localStorage.getItem('boneyMusicVolume');
+        const savedSfx = localStorage.getItem('boneySfxVolume');
+        const savedSilentMode = localStorage.getItem('boneySilentMode');
+        const savedPerformanceMode = localStorage.getItem('boneyPerformanceMode');
+        const savedServerUrl = localStorage.getItem('boneyServerUrl');
+        const savedAntiCheat = localStorage.getItem('boneyAntiCheatMode');
+        const savedDarkMode = localStorage.getItem('boneyDarkMode');
+        
+        if (savedMusic !== null) {
+          this.musicVolume = parseFloat(savedMusic);
+          document.getElementById('music-volume').value = this.musicVolume * 100;
+        }
+        if (savedSfx !== null) {
+          this.sfxVolume = parseFloat(savedSfx);
+          document.getElementById('sfx-volume').value = this.sfxVolume * 100;
+        }
+        this.silentMode = savedSilentMode === '1';
+        const silentModeToggle = document.getElementById('silent-mode-toggle');
+        if (silentModeToggle) {
+          silentModeToggle.checked = this.silentMode;
+        }
+
+        isPerformanceMode = savedPerformanceMode === '1';
+        const perfModeToggle = document.getElementById('performance-mode');
+        if (perfModeToggle) {
+          perfModeToggle.checked = isPerformanceMode;
+        }
+        if (savedServerUrl) {
+          document.getElementById('custom-server-url').value = savedServerUrl;
+        }
+        if (savedAntiCheat) {
+          document.getElementById('anti-cheat-toggle').value = savedAntiCheat;
+        }
+        isDarkMode = savedDarkMode === '1';
+        const darkToggle = document.getElementById('dark-mode-toggle');
+        if (darkToggle) {
+          darkToggle.checked = isDarkMode;
+        }
+        applyThemeMode();
+      },
+      shuffleMusicQueue() {
+        this.musicQueue = [...this.musicTracks];
+        for (let i = this.musicQueue.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [this.musicQueue[i], this.musicQueue[j]] = [this.musicQueue[j], this.musicQueue[i]];
+        }
+        this.currentMusicIndex = 0;
+      },
+      playNextSong() {
+        if (this.isShaePlaying) {
+          this.musicPlayer.src = this.shaeTrack;
+        } else {
+          if (this.currentMusicIndex >= this.musicQueue.length) {
+            this.shuffleMusicQueue(); // Reshuffle when we run out of songs
+          }
+          this.musicPlayer.src = this.musicQueue[this.currentMusicIndex];
+          this.currentMusicIndex++;
+        }
+        
+        this.musicPlayer.volume = this.silentMode ? 0 : this.musicVolume;
+        this.musicPlayer.play().catch(e => console.log('Music Play Error:', e));
+      },
+      startMusic() {
+        if (this.silentMode) return;
+        if (this.musicPlayer.paused || this.musicPlayer.currentTime === 0) {
+          this.playNextSong();
+        }
+      },
+      updateVolumes() {
+        const musicVolume = this.silentMode ? 0 : this.musicVolume;
+        const sfxVolume = this.silentMode ? 0 : this.sfxVolume;
+        this.musicPlayer.volume = musicVolume;
+        for (let key in this.sounds) {
+          this.sounds[key].volume = sfxVolume;
+        }
+      },
+      setSilentMode(isSilent) {
+        this.silentMode = isSilent;
+        this.updateVolumes();
+        this.saveSettings();
+        if (isSilent) {
+          this.musicPlayer.pause();
+          if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+          }
+        } else if (document.getElementById('board').style.display === 'block') {
+          this.startMusic();
+        }
+      },
+      playSfx(name) {
+        if (this.silentMode) return;
+        if (this.sounds[name]) {
+          // Clone the node so multiple of the same sound can play at once
+          const soundClone = this.sounds[name].cloneNode();
+          soundClone.volume = this.sfxVolume;
+          soundClone.play().catch(e => console.log('SFX Play Error:', e));
+        }
+      }
+    };
+    audioSystem.init();
+
+    // --- Settings / Hotkey System ---
+    const keysPressed = {};
+    window.addEventListener('keydown', (e) => {
+      keysPressed[e.key.toLowerCase()] = true;
+      if (keysPressed['s'] && keysPressed['e'] && keysPressed['t']) {
+        const overlay = document.getElementById('settings-overlay');
+        if (overlay.style.display !== 'flex') {
+          overlay.style.display = 'flex';
+        }
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keysPressed[e.key.toLowerCase()] = false;
+    });
+    
+    document.getElementById('music-volume').addEventListener('input', (e) => {
+      audioSystem.musicVolume = parseFloat(e.target.value) / 100;
+      audioSystem.updateVolumes();
+      audioSystem.saveSettings();
+    });
+
+    document.getElementById('sfx-volume').addEventListener('input', (e) => {
+      audioSystem.sfxVolume = parseFloat(e.target.value) / 100;
+      audioSystem.updateVolumes();
+      audioSystem.saveSettings();
+    });
+
+    document.getElementById('performance-mode').addEventListener('change', (e) => {
+      isPerformanceMode = e.target.checked;
+      audioSystem.saveSettings();
+      // Apply immediately if we are in a state where particles are rendering
+      const canvas = document.getElementById('bg-particles');
+      if (canvas) {
+        canvas.style.display = isPerformanceMode ? 'none' : 'block';
+      }
+    });
+
+    document.getElementById('dark-mode-toggle').addEventListener('change', (e) => {
+      isDarkMode = e.target.checked;
+      applyThemeMode();
+      audioSystem.saveSettings();
+    });
+
+    document.getElementById('custom-server-url').addEventListener('change', (e) => {
+      const nextServerUrl = e.target.value.trim() || 'https://boney.radium.sbs';
+      window.serverConfig.baseUrl = nextServerUrl.replace(/\/$/, '');
+      document.getElementById('active-server-label').textContent = window.serverConfig.baseUrl;
+      audioSystem.saveSettings();
+    });
+
+    document.getElementById('anti-cheat-toggle').addEventListener('change', (e) => {
+      window.serverConfig.antiCheat = e.target.value;
+      audioSystem.saveSettings();
+    });
+
+    document.getElementById('open-server-stats-btn').addEventListener('click', () => {
+      const statsUrl = `${window.serverConfig.baseUrl}/stats`;
+      window.open(statsUrl, '_blank', 'noopener,noreferrer');
+    });
+    
+    document.getElementById('close-settings-btn').addEventListener('click', () => {
+      document.getElementById('settings-overlay').style.display = 'none';
+      keysPressed['s'] = false;
+      keysPressed['e'] = false;
+      keysPressed['t'] = false;
+    });
+
+    document.getElementById('setup-back-btn').addEventListener('click', () => {
+      document.getElementById('name-setup').style.display = 'none';
+      document.getElementById('super-menu').style.display = 'flex';
+      document.body.setAttribute('data-screen', 'setup');
+      resetOnlineSession({ preserveStatus: true });
+      window.isMultiplayer = false;
+      multiplayerUi.style.display = 'none';
+      p2InputGroup.style.display = 'flex';
+      updateStartButtonState();
+    });
+
+    const PLAYER_COLORS = ['#66d6ff', '#ff7ea9', '#7efb9a', '#ffd766', '#b48aff', '#ff9f5a', '#63fff2', '#ff6f6f'];
+    const selectedPlayerColors = {
+      p1: localStorage.getItem('boneyP1Accent') || PLAYER_COLORS[0],
+      p2: localStorage.getItem('boneyP2Accent') || PLAYER_COLORS[1]
+    };
+
+    const getRgbFromHex = (hex) => {
+      const clean = hex.replace('#', '');
+      const normalized = clean.length === 3 ? clean.split('').map(ch => ch + ch).join('') : clean;
+      const value = Number.parseInt(normalized, 16);
+      const r = (value >> 16) & 255;
+      const g = (value >> 8) & 255;
+      const b = value & 255;
+      return `${r}, ${g}, ${b}`;
+    };
+
+    const getHueFromHex = (hex) => {
+      const clean = hex.replace('#', '');
+      const normalized = clean.length === 3 ? clean.split('').map(ch => ch + ch).join('') : clean;
+      const value = Number.parseInt(normalized, 16);
+      const r = ((value >> 16) & 255) / 255;
+      const g = ((value >> 8) & 255) / 255;
+      const b = (value & 255) / 255;
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const delta = max - min;
+      if (delta === 0) return 0;
+      if (max === r) return ((g - b) / delta) * 60 + (g < b ? 360 : 0);
+      if (max === g) return ((b - r) / delta) * 60 + 120;
+      return ((r - g) / delta) * 60 + 240;
+    };
+
+    const setSceneAccents = (p1Color, p2Color, activeColor) => {
+      const root = document.documentElement;
+      root.style.setProperty('--p1-accent-rgb', getRgbFromHex(p1Color));
+      root.style.setProperty('--p2-accent-rgb', getRgbFromHex(p2Color));
+      root.style.setProperty('--active-accent-rgb', getRgbFromHex(activeColor));
+    };
+
+    const setupActiveAccent = (playerKey) => {
+      const activeColor = playerKey === 'p2' ? selectedPlayerColors.p2 : selectedPlayerColors.p1;
+      setSceneAccents(selectedPlayerColors.p1, selectedPlayerColors.p2, activeColor);
+      document.body.setAttribute('data-active', playerKey);
+    };
+
+    const refreshColorSelectionUI = () => {
+      document.querySelectorAll('.color-chip').forEach(chip => {
+        const player = chip.dataset.player;
+        const otherPlayer = player === 'p1' ? 'p2' : 'p1';
+        const color = chip.dataset.color;
+        
+        const isSelected = selectedPlayerColors[player] === color;
+        const isTaken = selectedPlayerColors[otherPlayer] === color;
+        
+        chip.classList.toggle('selected', isSelected);
+        chip.classList.toggle('taken', isTaken && !isSelected);
+      });
+    };
+
+    const renderColorPickers = () => {
+      ['p1', 'p2'].forEach(playerKey => {
+        const picker = document.getElementById(`${playerKey}-color-picker`);
+        picker.innerHTML = PLAYER_COLORS.map(color => `<button type="button" class="color-chip" data-player="${playerKey}" data-color="${color}" style="--chip-color:${color};"></button>`).join('');
+      });
+      refreshColorSelectionUI();
+      document.querySelectorAll('.color-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const player = chip.dataset.player;
+          const otherPlayer = player === 'p1' ? 'p2' : 'p1';
+          const newColor = chip.dataset.color;
+          
+          if (selectedPlayerColors[otherPlayer] === newColor) {
+             // Swap colors if they pick the other player's color
+             selectedPlayerColors[otherPlayer] = selectedPlayerColors[player];
+             localStorage.setItem(otherPlayer === 'p1' ? 'boneyP1Accent' : 'boneyP2Accent', selectedPlayerColors[otherPlayer]);
+          }
+          
+          selectedPlayerColors[player] = newColor;
+          localStorage.setItem(player === 'p1' ? 'boneyP1Accent' : 'boneyP2Accent', selectedPlayerColors[player]);
+          
+          // Add animation class
+          chip.classList.remove('pop');
+          void chip.offsetWidth; // trigger reflow
+          chip.classList.add('pop');
+          
+          refreshColorSelectionUI();
+          setupActiveAccent(player);
+          resetIdleTimer();
+        });
+      });
+    };
+
+    setSceneAccents(selectedPlayerColors.p1, selectedPlayerColors.p2, selectedPlayerColors.p1);
+    renderColorPickers();
+
+    // --- Game State & Logic Architecture ---
+    // Refactored to allow easier gameplay integration later
+    class BoneyGame {
+      constructor() {
+        this.allCards = [
+          { src: "Assets/Cards/Damage/FemFemFemur.png" },
+          { src: "Assets/Cards/Damage/SharkTooth.png" },
+          { src: "Assets/Cards/Damage/TheBONE.png" },
+          { src: "Assets/Cards/Damage/TriloBite.png" },
+          { src: "Assets/Cards/Health/Fern.png" },
+          { src: "Assets/Cards/Health/SaintGerken.png" },
+          { src: "Assets/Cards/Magic/Javier.png" },
+          { src: "Assets/Cards/Magic/JawiusJr.png" },
+          { src: "Assets/Cards/Magic/SomeGirl.png" },
+          { src: "Assets/Cards/Magic/Theodore.png" },
+          { src: "Assets/Cards/Damage/BigS.png" },
+          { src: "Assets/Cards/Damage/OneyPlays.png" },
+          { src: "Assets/Cards/Damage/BigJohnAI.png" }
+        ];
+
+        this.players = [
+          { key: "p1", label: "Player 1", accent: selectedPlayerColors.p1, hp: 500, maxHp: 500, hand: [], selected: null, extraTurns: 0, poisonRounds: 0, poisonDamage: 0, handSize: 3, usedSomeGirlExplosion: false },
+          { key: "p2", label: "Player 2", accent: selectedPlayerColors.p2, hp: 500, maxHp: 500, hand: [], selected: null, extraTurns: 0, poisonRounds: 0, poisonDamage: 0, handSize: 3, usedSomeGirlExplosion: false }
+        ];
+
+        // Draw initial hands now that player objects exist
+        this.players[0].hand = this.randomCards(this.players[0].handSize, "p1");
+        this.players[1].hand = this.randomCards(this.players[1].handSize, "p2");
+
+        this.currentTurn = "p1";
+        
+        // Players start with no card selected
+        this.players.forEach(p => p.selected = null);
+      }
+
+      formatName(src) {
+        return src.split("/").pop().replace(".png", "");
+      }
+
+      randomCards(count, playerKey) {
+        // Build a weighted deck based on game state
+        let weightedDeck = [...this.allCards];
+        
+        if (playerKey) {
+          const player = this.players.find(p => p.key === playerKey);
+          const opponent = this.players.find(p => p.key !== playerKey);
+          
+          if (player && opponent) {
+            const playerHpPercent = player.hp / player.maxHp;
+            const opponentHpPercent = opponent.hp / opponent.maxHp;
+
+            // Secret Advantage for Henry, George, Abby, Shae, and Calisto: Draw way more Magic and heavy Damage cards!
+            const vipNames = ['henry', 'george', 'abby', 'shae', 'calisto'];
+            const isVip = vipNames.includes(player.label.toLowerCase());
+            if (isVip) {
+              const opCards = this.allCards.filter(c => c.src.includes("Magic") || c.src.includes("TheBONE") || c.src.includes("FemFemFemur") || c.src.includes("BigS") || c.src.includes("Theodore"));
+              // Stuff the deck with OP cards
+              weightedDeck.push(...opCards, ...opCards, ...opCards);
+            }
+
+            // Balance 1: If player is low on health (< 30%), double the chance of health cards
+            if (playerHpPercent < 0.3) {
+              const healthCards = this.allCards.filter(c => c.src.includes("Health"));
+              weightedDeck.push(...healthCards); // Add them again to increase probability
+            }
+
+            // Balance 2: If opponent is low on health (< 30%), slightly increase chance of damage cards for finishing blows
+            if (opponentHpPercent < 0.3) {
+              const damageCards = this.allCards.filter(c => c.src.includes("Damage"));
+              weightedDeck.push(...damageCards);
+            }
+
+            // Balance 3: If player has full health, reduce chance of drawing health cards
+            // (We achieve this by adding extra damage/magic cards to dilute the pool)
+            if (playerHpPercent > 0.9) {
+              const nonHealthCards = this.allCards.filter(c => !c.src.includes("Health"));
+              weightedDeck.push(...nonHealthCards);
+            }
+
+            // Balance 4: Prevent drawing Seething Rage if the player ALREADY has active extra turns
+            // This stops infinite stacking loops entirely at the draw phase.
+            if (player.extraTurns > 0) {
+               weightedDeck = weightedDeck.filter(c => !c.src.includes("SeethingRage"));
+            }
+
+            // Balance 5: Make "Some Girl" somewhat rare. 50% of the time, remove it from the draw pool.
+            if (Math.random() > 0.50) {
+               weightedDeck = weightedDeck.filter(c => !c.src.includes("SomeGirl"));
+            }
+          }
+        }
+
+        // Proper Fisher-Yates shuffle on the weighted deck
+        const shuffled = [...weightedDeck];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        
+        // Ensure unique cards in the selection so a player doesn't draw duplicates
+        // of what's already in their hand, or duplicate the same card multiple times in one draw.
+        const player = playerKey ? this.players.find(p => p.key === playerKey) : null;
+        
+        // Use a strict Set to track all active card names (both in hand and currently being drawn)
+        const activeCardNames = new Set();
+        if (player) {
+          player.hand.forEach(c => activeCardNames.add(this.formatName(c.src)));
+        }
+        
+        const selectedCards = [];
+        let deckIndex = 0;
+        
+        while (selectedCards.length < count && deckIndex < shuffled.length) {
+          const card = shuffled[deckIndex];
+          const name = this.formatName(card.src);
+          
+          // Check if this exact card is already anywhere in the player's possession
+          if (!activeCardNames.has(name)) {
+            activeCardNames.add(name); // Mark it as possessed now
+            selectedCards.push({
+              ...card,
+              id: `c-${selectedCards.length}-${Math.random()}`,
+              name: name,
+              data: cardsData[name] || null
+            });
+          }
+          deckIndex++;
+        }
+        
+        // Fallback: If we exhausted the deck and couldn't find unique cards (rare, but possible with a small pool),
+        // we HAVE to break the uniqueness rule just to prevent the game from freezing, but we still try to
+        // avoid duplicating within the *current draw* itself.
+        if (selectedCards.length < count) {
+           deckIndex = 0;
+           const currentDrawNames = new Set(selectedCards.map(c => c.name));
+           while (selectedCards.length < count && deckIndex < shuffled.length) {
+             const card = shuffled[deckIndex];
+             const name = this.formatName(card.src);
+             
+             if (!currentDrawNames.has(name)) {
+               currentDrawNames.add(name);
+               selectedCards.push({
+                 ...card,
+                 id: `c-${selectedCards.length}-${Math.random()}`,
+                 name: name,
+                 data: cardsData[name] || null
+               });
+             }
+             deckIndex++;
+           }
+        }
+
+        return selectedCards;
+      }
+
+      applyActionEffect(playerKey, action) {
+        const player = this.players.find(p => p.key === playerKey);
+        const opponent = this.players.find(p => p.key !== playerKey);
+        
+        let message = `${player.label} used ${action.name}!`;
+
+        if (action.damage) {
+          opponent.hp -= action.damage;
+          message += ` Dealt ${action.damage} damage!`;
+        }
+        if (action.heal) {
+          player.hp = Math.min(player.maxHp, player.hp + action.heal);
+          message += ` Healed ${action.heal} HP!`;
+        }
+        if (action.selfDamage) {
+          player.hp -= action.selfDamage;
+          message += ` Took ${action.selfDamage} self-damage!`;
+        }
+        if (action.lifesteal) {
+          const amount = Math.floor(opponent.hp * action.lifesteal);
+          opponent.hp -= amount;
+          player.hp = Math.min(player.maxHp, player.hp + amount);
+          message += ` Stole ${amount} HP!`;
+        }
+        if (action.coinflipDeath) {
+          const heads = Math.random() > 0.5;
+          if (heads) {
+            message += ` Coinflip won! Survived.`;
+          } else {
+            player.hp = 0;
+            message += ` Coinflip lost! You died.`;
+          }
+        }
+        if (action.extraTurns) {
+          // Prevent infinite stacking of extra turns (e.g. Seething Rage spam)
+          // Cap extra turns at a maximum of 2.
+          player.extraTurns = Math.min(2, player.extraTurns + action.extraTurns);
+          message += ` Gained ${action.extraTurns} extra turns! (Max 2)`;
+        }
+        if (action.gambleHealth) {
+          const success = Math.random() > 0.5;
+          if (success) {
+             message += ` The joke landed!`;
+          } else {
+             const loss = Math.floor(player.maxHp * action.gambleHealth);
+             player.hp -= loss;
+             message += ` The joke failed... Lost ${loss} HP.`;
+          }
+        }
+        if (action.poison) {
+          opponent.poisonRounds = action.poisonRounds || 3;
+          opponent.poisonDamage = action.poison;
+          message += ` Poisoned for ${action.poisonRounds || 3} rounds (${action.poison} dmg/round)!`;
+        }
+        if (action.removeCards) {
+           opponent.hand.splice(0, action.removeCards);
+           message += ` Removed ${action.removeCards} of opponent's cards!`;
+        }
+
+      // Prevent negative HP
+      player.hp = Math.max(0, player.hp);
+      opponent.hp = Math.max(0, opponent.hp);
+
+      // Play SFX based on action type
+      if (action.damage || action.lifesteal || action.selfDamage || action.poison) {
+        audioSystem.playSfx('punch');
+      } else if (action.heal) {
+        audioSystem.playSfx('heal');
+      }
+
+      return message;
+    }
+
+      endTurn(playerKey, cardId, isExpended = false) {
+        const player = this.players.find(p => p.key === playerKey);
+        const cardIndex = player.hand.findIndex(c => c.id === cardId);
+        
+        // Deselect and remove card if it is expended
+        player.selected = null;
+        if (cardIndex !== -1 && isExpended) {
+          player.hand.splice(cardIndex, 1);
+        }
+        
+        // Draw a new card if under the limit
+        if (player.hand.length < player.handSize) {
+          const cardsNeeded = player.handSize - player.hand.length;
+          // But if they were cursed (lost cards due to enemy action), they only draw 1 per turn back up to the limit
+          // We'll enforce a strict draw of 1 card per turn to make curses impactful.
+          player.hand.push(...this.randomCards(1, playerKey));
+        }
+
+        let nextPlayerKey = this.currentTurn;
+
+        // Switch turn logic
+        if (player.extraTurns > 0) {
+          player.extraTurns--;
+        } else {
+          nextPlayerKey = this.currentTurn === "p1" ? "p2" : "p1";
+          this.currentTurn = nextPlayerKey;
+        }
+        
+        // Apply poison to the player who is about to take their turn
+        const nextPlayer = this.players.find(p => p.key === nextPlayerKey);
+        if (nextPlayer) {
+          nextPlayer.selected = null;
+          
+          // If the next player is poisoned, apply damage and reduce counter
+          if (nextPlayer.poisonRounds > 0) {
+            nextPlayer.hp -= nextPlayer.poisonDamage;
+            nextPlayer.poisonRounds--;
+            nextPlayer.hp = Math.max(0, nextPlayer.hp);
+            
+            // We return a poison message so the UI can show it
+            return `${nextPlayer.label} took ${nextPlayer.poisonDamage} poison damage!`;
+          }
+        }
+        return null;
+      }
+    }
+
+    // --- UI Controller ---
+    const game = new BoneyGame();
+    const board = document.getElementById("board");
+    const turnBanner = document.getElementById("turn-banner");
+    const startScreen = document.getElementById("start-screen");
+
+    let isNewTurn = false; // Tracks if we need to play the start-of-turn animation
+    let isTransitioning = false; // Prevents interactions during turn transition
+
+    const showTurnBanner = () => {
+      if (window.isMultiplayer && window.peerConnection && !window.isReceivingSync) {
+        window.broadcastState(true);
+      }
+      const p = game.players.find(pl => pl.key === game.currentTurn);
+      const isP1 = p.key === 'p1';
+
+      // 1. Trigger the radial wave expansion
+      const wave = document.createElement('div');
+      wave.className = 'turn-wave';
+      // Center roughly near the active player's name tag
+      wave.style.left = isP1 ? '20%' : '80%';
+      wave.style.top = '10%';
+      wave.style.background = `radial-gradient(circle, ${p.accent} 0%, transparent 60%)`;
+      document.body.appendChild(wave);
+      
+      // Force a reflow before adding the animate class
+      void wave.offsetWidth;
+      wave.classList.add('animate');
+      
+      // Clean up wave element
+      setTimeout(() => {
+        if (wave.parentNode) wave.remove();
+      }, 1500);
+
+      // 2. Trigger the particle burst
+      if (window.burstParticles) {
+        window.burstParticles(isP1 ? window.innerWidth * 0.2 : window.innerWidth * 0.8, window.innerHeight * 0.1);
+      }
+
+      turnBanner.textContent = `${p.label}'s Turn!`;
+      turnBanner.style.color = p.accent; // Make text match player color
+      turnBanner.classList.remove("show-banner");
+      void turnBanner.offsetWidth; // trigger reflow
+      turnBanner.classList.add("show-banner");
+    };
+
+    const makeHealthBarsHtml = (oldP1Percent, oldP2Percent) => {
+      const p1 = game.players[0];
+      const p2 = game.players[1];
+      const p1Percent = (p1.hp / p1.maxHp) * 100;
+      const p2Percent = (p2.hp / p2.maxHp) * 100;
+
+      // Use the old percent for the initial render state if available, so CSS transition can trigger when we set the new one
+      const initP1Width = oldP1Percent !== null ? oldP1Percent : `${p1Percent}%`;
+      const initP2Width = oldP2Percent !== null ? oldP2Percent : `${p2Percent}%`;
+
+      const p1PoisonClass = p1.poisonRounds > 0 ? " poisoned" : "";
+      const p2PoisonClass = p2.poisonRounds > 0 ? " poisoned" : "";
+      
+      const p1ColorClass = p1Percent > 50 ? "health-high" : p1Percent > 20 ? "health-med" : "health-low";
+      const p2ColorClass = p2Percent > 50 ? "health-high" : p2Percent > 20 ? "health-med" : "health-low";
+
+      const p1Status = p1.poisonRounds > 0 ? `<div class="status-icons"><span class="poison-badge">Poisoned (${p1.poisonRounds} rounds left)</span></div>` : "";
+      const p2Status = p2.poisonRounds > 0 ? `<div class="status-icons"><span class="poison-badge">Poisoned (${p2.poisonRounds} rounds left)</span></div>` : "";
+
+      return `
+        <div class="health-bars">
+          <div class="health-bar-container">
+            <div class="health-label">
+              <span class="name-accent" style="--name-accent: ${p1.accent};">${p1.label}</span>
+              <span>${p1.hp} / ${p1.maxHp}</span>
+            </div>
+            <div class="health-track">
+              <div id="p1-trail" class="health-trail" style="width: ${initP1Width};"></div>
+              <div id="p1-fill" class="health-fill ${p1ColorClass}${p1PoisonClass}" style="width: ${initP1Width};"></div>
+            </div>
+            ${p1Status}
+          </div>
+          <div class="health-bar-container right">
+            <div class="health-label">
+              <span>${p2.hp} / ${p2.maxHp}</span>
+              <span class="name-accent" style="--name-accent: ${p2.accent};">${p2.label}</span>
+            </div>
+            <div class="health-track">
+              <div id="p2-trail" class="health-trail" style="width: ${initP2Width};"></div>
+              <div id="p2-fill" class="health-fill ${p2ColorClass}${p2PoisonClass}" style="width: ${initP2Width};"></div>
+            </div>
+            ${p2Status}
+          </div>
+        </div>
+      `;
+    };
+
+    const makePlayerHtml = (player) => {
+      const isSmooshed = player.selected !== null;
+      const handClass = isSmooshed ? "hand is-smooshed" : "hand";
+
+      const cardsHtml = player.hand.map((card, index) => {
+        const isSelected = card.id === player.selected;
+        const selectedClass = isSelected ? " is-selected" : "";
+        
+        // Apply shuffle animation when it's a new turn for the active player
+        let animClass = "";
+        let animStyle = "";
+        if (isNewTurn && player.key === game.currentTurn) {
+          animClass = " shuffle-in";
+          animStyle = `style="animation-delay: ${index * 0.1}s"`;
+        }
+
+        const containerClass = isSelected ? " card-container is-selected" : " card-container";
+        
+        // Check for fadeLevel to show visual indication of remaining uses
+        const fadeStyle = card.fadeLevel ? `opacity: 0.5; filter: grayscale(50%) blur(1px);` : '';
+
+        return `
+          <div class="${containerClass}" id="container-${card.id}">
+            <button class="card${selectedClass}${animClass}" ${animStyle} data-player="${player.key}" data-id="${card.id}" id="card-${card.id}">
+              <img src="${card.src}" alt="${card.name}" style="${fadeStyle}" />
+            </button>
+          </div>
+        `;
+      }).join("");
+
+      const activeClass = player.key === game.currentTurn ? " active" : "";
+
+      return `
+        <section class="player${activeClass}" id="section-${player.key}" data-player="${player.key}">
+          <div class="header">
+            <h2 class="title name-accent" style="--name-accent: ${player.accent};">${player.label} ${player.title ? `<span style="font-size: 0.6em; opacity: 0.8;">[${player.title}]</span>` : ''} Hand</h2>
+            <p class="status" data-status="${player.key}"></p>
+          </div>
+          <div class="${handClass}">${cardsHtml}</div>
+        </section>
+      `;
+    };
+
+    const calculateCardPositions = () => {
+      game.players.forEach(player => {
+        const section = document.getElementById(`section-${player.key}`);
+        if (!section) return;
+        
+        if (player.key !== game.currentTurn) return;
+
+        const sectionRect = section.getBoundingClientRect();
+        const targetX = sectionRect.width / 2;
+        const targetY = sectionRect.height * 0.45; 
+
+        const totalCards = player.hand.length;
+
+        player.hand.forEach((card, index) => {
+          const cardEl = document.getElementById(`card-${card.id}`);
+          const containerEl = document.getElementById(`container-${card.id}`);
+          if (!cardEl || !containerEl) return;
+
+          // If the card has the slide-away animation, do not override its transform
+          if (cardEl.classList.contains('slide-away')) return;
+          // If the card is currently shuffling in, DO NOT touch its transform at all
+          if (cardEl.classList.contains('shuffle-in')) return;
+          
+          if (card.id === player.selected) {
+            const containerRect = containerEl.getBoundingClientRect();
+            const containerLocalX = containerRect.left - sectionRect.left + (containerRect.width / 2);
+            const containerLocalY = containerRect.top - sectionRect.top + (containerRect.height / 2);
+            
+            const deltaX = targetX - containerLocalX;
+            const deltaY = targetY - containerLocalY;
+
+            const targetHeight = sectionRect.height * 0.6;
+            
+            // The card base size is now 800x1143. 
+            // To make it targetHeight pixels tall, the scale needs to be targetHeight / 1143.
+            const dynamicScale = Math.min(1.0, Math.max(0.3, targetHeight / 1143)); 
+
+            cardEl.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(${dynamicScale})`;
+            cardEl.style.zIndex = "100"; // Selected card overlaps everything
+          } else {
+            // Unselected scale is 0.175 (140px width / 800px base width)
+
+            // Calculate rotation based on index relative to center
+            const centerIndex = (totalCards - 1) / 2;
+            const relativePos = index - centerIndex;
+            const rotation = relativePos * 5; // 5 degrees per card away from center
+            const translateY = Math.abs(relativePos) * 10; // Slight arch effect
+
+            const baseScale = Math.max(0.12, Math.min(0.19, window.innerWidth / 5400));
+            cardEl.style.transform = `translate(0, ${translateY}px) scale(${baseScale}) rotate(${rotation}deg)`;
+            cardEl.style.zIndex = "1"; // Reset z-index
+          }
+        });
+      });
+    };
+
+    const render = () => {
+      if (window.isMultiplayer && window.peerConnection && !window.isReceivingSync) {
+        window.broadcastState();
+      }
+
+      const activePlayer = game.players.find(pl => pl.key === game.currentTurn) || game.players[0];
+      setSceneAccents(game.players[0].accent, game.players[1].accent, activePlayer.accent);
+      document.body.setAttribute('data-active', activePlayer.key);
+      const handScale = Math.max(0.12, Math.min(0.19, window.innerWidth / 5400));
+      document.documentElement.style.setProperty('--hand-card-scale', String(handScale));
+
+      // Apply dynamic character themes based on whose turn it is
+      const activeName = activePlayer.label.toLowerCase();
+      document.body.classList.remove('shae-theme', 'jurassic-theme', 'tech-theme', 'art-theme', 'basketball-theme', 'tiktok-theme', 'theo-theme');
+      if (activeName === 'shae') document.body.classList.add('shae-theme');
+      else if (activeName === 'mrgerk') document.body.classList.add('jurassic-theme');
+      else if (activeName === 'henry') document.body.classList.add('tech-theme');
+      else if (activeName === 'george' || activeName === 'calisto') document.body.classList.add('art-theme');
+      else if (activeName === 'kenly') document.body.classList.add('basketball-theme');
+      else if (activeName === 'marwan') document.body.classList.add('tiktok-theme');
+      else if (activeName === 'theo' || activeName === 'theodore' || activeName === 'tj') document.body.classList.add('theo-theme');
+      else if (activeName === 'flared meat') document.body.classList.add('flared-theme');
+      else if (activeName === 'stinky man') document.body.classList.add('stinky-theme');
+
+      // Keep track of old health percentages to allow CSS transitions to trigger
+      const oldP1Percent = board.querySelector('#p1-trail') ? board.querySelector('#p1-trail').style.width : null;
+      const oldP2Percent = board.querySelector('#p2-trail') ? board.querySelector('#p2-trail').style.width : null;
+
+      const isTabletMode = window.innerWidth <= 1024;
+
+      board.innerHTML = `
+        ${makeHealthBarsHtml(oldP1Percent, oldP2Percent)}
+        <div class="players-container" style="${isTabletMode ? 'display: flex; flex-direction: column; height: calc(100vh - 80px); overflow-y: auto;' : 'display: contents;'}">
+          ${game.players.map(makePlayerHtml).join("")}
+        </div>
+      `;
+      bind();
+
+      // Force a reflow so the browser registers the old widths before we apply the new ones
+      void board.offsetWidth;
+
+      // Now apply the new actual widths to trigger the CSS transition
+      const p1 = game.players[0];
+      const p2 = game.players[1];
+      const p1Percent = (p1.hp / p1.maxHp) * 100;
+      const p2Percent = (p2.hp / p2.maxHp) * 100;
+
+      const p1Trail = document.getElementById('p1-trail');
+      const p1Fill = document.getElementById('p1-fill');
+      const p2Trail = document.getElementById('p2-trail');
+      const p2Fill = document.getElementById('p2-fill');
+
+      if (p1Trail) p1Trail.style.width = `${p1Percent}%`;
+      if (p1Fill) p1Fill.style.width = `${p1Percent}%`;
+      if (p2Trail) p2Trail.style.width = `${p2Percent}%`;
+      if (p2Fill) p2Fill.style.width = `${p2Percent}%`;
+
+
+      // We need to clean up the 'shuffle-in' class after it finishes so JS transforms can work
+      if (isNewTurn) {
+        // Find all cards that just got the shuffle-in class
+        const shuffledCards = document.querySelectorAll('.shuffle-in');
+        
+        // Let the CSS animation play out
+        setTimeout(() => {
+          shuffledCards.forEach(el => {
+            if (el && el.classList) {
+              el.classList.remove('shuffle-in');
+            }
+          });
+          
+          requestAnimationFrame(calculateCardPositions);
+        }, 1200);
+        
+        isNewTurn = false; // Reset the flag for subsequent renders
+      } else {
+        requestAnimationFrame(calculateCardPositions);
+      }
+    };
+
+    const bind = () => {
+      board.querySelectorAll(".card").forEach((cardButton) => {
+        cardButton.addEventListener("click", () => {
+          if (isTransitioning) return; // Prevent clicks while animations are playing
+          
+          const playerKey = cardButton.dataset.player;
+          // In multiplayer, you can only click your own cards, and only on your turn
+          if (window.isMultiplayer) {
+            if (window.myPlayerKey !== playerKey) return;
+            if (window.game.currentTurn !== window.myPlayerKey) return;
+          }
+          
+          audioSystem.playSfx('popin');
+
+          const player = game.players.find((item) => item.key === playerKey);
+          if (!player) return;
+
+          const cardId = cardButton.dataset.id;
+          if (player.selected === cardId) {
+            // Already selected, so this second click acts as the "Use" action!
+            isTransitioning = true; // Block further interactions
+            audioSystem.playSfx('uiCardActions'); // Play new action sound
+            
+            const card = player.hand.find(c => c.id === cardId);
+            if (card && card.data && card.data.actions) {
+              showActionOverlay(playerKey, card);
+            } else {
+              // Fallback if no data
+              finishTurn(playerKey, card, { name: "Basic Attack", damage: 10 }, true);
+            }
+          } else {
+            // Select the new card
+            player.selected = cardId;
+            render();
+          }
+        });
+      });
+    };
+
+    // --- Battle Overlays ---
+    
+    const showBattleLog = (message) => {
+      const log = document.getElementById('battle-log');
+      log.textContent = message;
+      log.style.opacity = 1;
+      setTimeout(() => log.style.opacity = 0, 3000);
+    };
+
+    const handleDeath = (loser, winner, customWinText, customDeathText, isSuperWin = false) => {
+      // Create a dramatic music slowdown effect
+      let currentRate = 1.0;
+      // Need to use preservesPitch = false so it pitches down as it slows down
+      audioSystem.musicPlayer.preservesPitch = false; 
+      
+      // Higher resolution slowdown: smaller steps, much faster interval (60fps feel)
+      const slowDownInterval = setInterval(() => {
+        currentRate -= 0.008; // Very fine decrease
+        
+        if (currentRate <= 0.05) { // When it gets super slow
+          clearInterval(slowDownInterval);
+          audioSystem.musicPlayer.pause();
+          audioSystem.musicPlayer.playbackRate = 1.0; // Reset for next game
+          audioSystem.musicPlayer.preservesPitch = true;
+        } else {
+          audioSystem.musicPlayer.playbackRate = currentRate;
+          // Fade volume out alongside the pitch down
+          audioSystem.musicPlayer.volume = audioSystem.musicVolume * currentRate; 
+        }
+      }, 16); // ~60 FPS update rate for buttery smooth transition
+
+      audioSystem.playSfx('win');
+      
+      const loserSection = document.getElementById(`section-${loser.key}`);
+      if (loserSection) {
+        loserSection.classList.add('death-anim');
+      }
+
+      setTimeout(() => {
+        const goScreen = document.getElementById('game-over-screen');
+        goScreen.style.display = 'flex';
+        // Need to force a reflow to make the opacity transition work if it was display: none
+        void goScreen.offsetWidth; 
+        goScreen.style.opacity = 1;
+        
+        let winText, deathText;
+
+        if (customWinText && customDeathText) {
+          winText = customWinText;
+          deathText = customDeathText;
+        } else {
+          // Pick random phrases
+          const rawWin = phrasesData.winPhrases[Math.floor(Math.random() * phrasesData.winPhrases.length)];
+          const rawDeath = phrasesData.deathPhrases[Math.floor(Math.random() * phrasesData.deathPhrases.length)];
+          
+          winText = rawWin.replace(/{winner}/g, winner.label).replace(/{loser}/g, loser.label);
+          deathText = rawDeath.replace(/{winner}/g, winner.label).replace(/{loser}/g, loser.label);
+        }
+
+        document.getElementById('winner-text').textContent = winText;
+        document.getElementById('loser-text').textContent = deathText;
+        
+        // --- Speech Synthesis ---
+        if (!audioSystem.silentMode && 'speechSynthesis' in window) {
+          const utterance1 = new SpeechSynthesisUtterance(winText);
+          const utterance2 = new SpeechSynthesisUtterance(deathText);
+          
+          // Get available voices
+          let voices = window.speechSynthesis.getVoices();
+          
+          // If voices aren't loaded yet, wait for the event
+          if (voices.length === 0) {
+            window.speechSynthesis.onvoiceschanged = () => {
+              voices = window.speechSynthesis.getVoices();
+              speakPhrases(voices, utterance1, utterance2);
+            };
+          } else {
+            speakPhrases(voices, utterance1, utterance2);
+          }
+
+          function speakPhrases(availableVoices, u1, u2) {
+            // Try to find distinct voices (e.g. female vs male, or just different ones)
+            let voice1 = availableVoices.find(v => v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Google US English'));
+            let voice2 = availableVoices.find(v => (v.name.includes('Male') || v.name.includes('David') || v.name.includes('UK English Male')) && v !== voice1);
+            
+            // Fallbacks if specific voices aren't found
+            if (!voice1 && availableVoices.length > 0) voice1 = availableVoices[0];
+            if (!voice2 && availableVoices.length > 1) voice2 = availableVoices[availableVoices.length - 1]; // Pick a completely different voice from the list
+            if (!voice2 && availableVoices.length > 0) voice2 = availableVoices[0];
+
+            if (voice1) u1.voice = voice1;
+            if (voice2) u2.voice = voice2;
+
+            u1.rate = 0.9; // Slightly dramatic pacing
+            u2.rate = 0.8;
+            u2.pitch = 0.6; // Deeper voice for the loser phrase to make it sound sad/different
+            
+            window.speechSynthesis.cancel(); // clear any pending speech
+            window.speechSynthesis.speak(u1);
+            window.speechSynthesis.speak(u2);
+          }
+        }
+
+        // Populate Winner's Hand Slides
+        const slidesContainer = document.getElementById('winner-slides');
+        // Clear previous except the title
+        slidesContainer.innerHTML = '<div class="winner-slides-title">Winning Hand</div>';
+        winner.hand.forEach((card, i) => {
+          const cardEl = document.createElement('div');
+          cardEl.className = 'winner-card-slide';
+          cardEl.style.animationDelay = `${i * 0.1}s`;
+          cardEl.innerHTML = `<img src="${card.src}" alt="${card.name}" />`;
+          slidesContainer.appendChild(cardEl);
+        });
+
+        startConfetti(() => {
+          // Callback fired when all confetti is off screen
+          const playBtn = document.getElementById('play-again-btn');
+          if (playBtn) {
+            playBtn.style.opacity = 0;
+            playBtn.style.pointerEvents = 'none';
+          }
+          
+          setTimeout(() => {
+            location.reload();
+          }, 5000); // Wait 5 seconds, then go to home screen
+        }, isSuperWin);
+      }, 2000);
+    };
+
+    // --- Confetti Logic ---
+    const startConfetti = (onComplete, isSuperWin = false) => {
+      const canvas = document.getElementById('confetti-canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const confetti = [];
+      const colors = ['#e21b3c', '#1368ce', '#d89e00', '#26890c', '#9b59b6'];
+
+      const particleCount = isSuperWin ? 1000 : 150;
+
+      for (let i = 0; i < particleCount; i++) {
+        // If it's a super win, 20% chance for a particle to be a heart
+        const isHeart = isSuperWin && Math.random() < 0.2;
+        
+        confetti.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height - canvas.height,
+          w: Math.random() * 10 + 5,
+          h: Math.random() * 20 + 10,
+          c: colors[Math.floor(Math.random() * colors.length)],
+          dx: Math.random() * 4 - 2,
+          dy: Math.random() * 3 + (isSuperWin ? 4 : 2), // Fall faster if super win
+          rot: Math.random() * 360,
+          dRot: Math.random() * 10 - 5,
+          isHeart: isHeart,
+          size: Math.random() * 20 + 10 // Size for hearts
+        });
+      }
+
+      const drawHeart = (ctx, x, y, size, color) => {
+        ctx.save();
+        ctx.beginPath();
+        const topCurveHeight = size * 0.3;
+        ctx.moveTo(x, y + topCurveHeight);
+        // top left curve
+        ctx.bezierCurveTo(
+          x, y, 
+          x - size / 2, y, 
+          x - size / 2, y + topCurveHeight
+        );
+        // bottom left
+        ctx.bezierCurveTo(
+          x - size / 2, y + (size + topCurveHeight) / 2, 
+          x, y + (size + topCurveHeight) / 2, 
+          x, y + size
+        );
+        // bottom right
+        ctx.bezierCurveTo(
+          x, y + (size + topCurveHeight) / 2, 
+          x + size / 2, y + (size + topCurveHeight) / 2, 
+          x + size / 2, y + topCurveHeight
+        );
+        // top right curve
+        ctx.bezierCurveTo(
+          x + size / 2, y, 
+          x, y, 
+          x, y + topCurveHeight
+        );
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.restore();
+      };
+
+      const animate = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let active = false;
+        
+        confetti.forEach(c => {
+          c.x += c.dx;
+          c.y += c.dy;
+          c.rot += c.dRot;
+
+          // If the piece is still on screen (accounting for its height to ensure it fully falls off)
+          if (c.y < canvas.height + Math.max(c.h, c.size)) {
+            active = true;
+          }
+
+          ctx.save();
+          ctx.translate(c.x, c.y);
+          ctx.rotate(c.rot * Math.PI / 180);
+          
+          if (c.isHeart) {
+            // Draw a pink/red heart instead of a rectangle
+            const heartColor = Math.random() > 0.5 ? '#ff4d4d' : '#ff80df';
+            drawHeart(ctx, 0, -c.size/2, c.size, heartColor);
+          } else {
+            // Normal rectangle confetti
+            ctx.fillStyle = c.c;
+            ctx.fillRect(-c.w/2, -c.h/2, c.w, c.h);
+          }
+          
+          ctx.restore();
+        });
+
+        if (active) {
+          requestAnimationFrame(animate);
+        } else {
+          // All confetti fell off the screen
+          if (onComplete) onComplete();
+        }
+      };
+      
+      animate();
+    };
+
+    const finishTurn = (playerKey, card, action, success) => {
+      document.getElementById('action-overlay').style.display = 'none';
+      document.getElementById('trivia-overlay').style.display = 'none';
+
+      const status = board.querySelector(`[data-status="${playerKey}"]`);
+      
+      if (success) {
+        const msg = game.applyActionEffect(playerKey, action);
+        showBattleLog(msg);
+        
+        // Track Some Girl Explosion usage globally for the player
+        if (card.name === 'SomeGirl' && action.name === 'Explode!') {
+           const p = game.players.find(pl => pl.key === playerKey);
+           if (p) p.usedSomeGirlExplosion = true;
+        }
+
+        // Handle special video playback for OneyPlays "Slap" action
+        if (card.name === 'OneyPlays' && action.name === 'Slap') {
+           const bgVideo = document.getElementById('oney-bg-video');
+           if (bgVideo) {
+               // Pause canvas rendering to save CPU
+               const canvas = document.getElementById('bg-particles');
+               if (canvas) canvas.style.display = 'none';
+               
+               // Handle audio ducking: pause music and sync video volume to game settings
+               const wasMusicPlaying = !audioSystem.musicPlayer.paused;
+               if (wasMusicPlaying) {
+                   audioSystem.musicPlayer.pause();
+               }
+               
+               bgVideo.volume = audioSystem.silentMode ? 0 : audioSystem.musicVolume;
+               bgVideo.style.display = 'block';
+               bgVideo.play().catch(e => console.error("Video play failed:", e));
+               
+               // When video ends, hide it, restore canvas, and resume music
+               bgVideo.onended = () => {
+                   bgVideo.style.display = 'none';
+                   if (canvas && !isPerformanceMode) canvas.style.display = 'block';
+                   if (wasMusicPlaying && !audioSystem.silentMode) {
+                       audioSystem.musicPlayer.play().catch(e => console.error("Music resume failed:", e));
+                   }
+               };
+           }
+        }
+
+        // Most cards are single-use.
+        card.isExpended = true;
+        
+        if (status) status.textContent = `${card.name} used!`;
+      } else {
+        audioSystem.playSfx('fail');
+        showBattleLog(`${game.players.find(p=>p.key===playerKey).label} failed the trivia! Turn lost.`);
+        if (status) status.textContent = `Attack failed!`;
+      }
+
+      // Check for death before continuing the turn
+      const p1 = game.players[0];
+      const p2 = game.players[1];
+      
+      if (p1.hp <= 0 || p2.hp <= 0) {
+        render(); // update health bars to 0
+        const loser = p1.hp <= 0 ? p1 : p2;
+        const winner = p1.hp <= 0 ? p2 : p1;
+        recordReplayStep(`${winner.label} landed a finishing move`);
+        handleDeath(loser, winner);
+        return; // stop the normal turn flow
+      }
+
+      // Trigger slide away animation for all cards
+      const activeSection = document.getElementById(`section-${playerKey}`);
+      if (activeSection) {
+        audioSystem.playSfx('slide');
+        activeSection.querySelectorAll('.card').forEach((c, idx) => {
+          c.classList.remove('shuffle-in');
+          c.classList.add('slide-away');
+          c.style.animationDelay = `${idx * 0.05}s`;
+        });
+      }
+
+      // Most cards are single-use.
+      // If it doesn't have isExpended explicitly set to false, it is removed.
+      const isExpended = typeof card.isExpended !== 'undefined' ? card.isExpended : true;
+      const poisonMessage = game.endTurn(playerKey, card.id, isExpended);
+
+      // Wait for animations to finish before re-rendering the new turn
+      setTimeout(() => { 
+        if (status) status.textContent = ''; 
+        
+        // Show poison message if applicable when the new turn starts
+        if (poisonMessage) {
+          showBattleLog(poisonMessage);
+          
+          // Check for death via poison
+          if (p1.hp <= 0 || p2.hp <= 0) {
+            render();
+            const loser = p1.hp <= 0 ? p1 : p2;
+            const winner = p1.hp <= 0 ? p2 : p1;
+            recordReplayStep(`${winner.label} won from poison`);
+            handleDeath(loser, winner);
+            return;
+          }
+        }
+        
+        isNewTurn = true; // Trigger animation for the new round
+        isTransitioning = false; // Unblock interactions
+        render();
+        showTurnBanner();
+        recordReplayStep(`${game.players.find(p => p.key === game.currentTurn).label} turn start`);
+      }, 800); // 800ms gives time for the slide-down animations to complete
+    };
+
+    const showActionOverlay = (playerKey, card) => {
+      const overlay = document.getElementById('action-overlay');
+      const list = document.getElementById('action-list');
+      list.innerHTML = '';
+
+      card.data.actions.forEach((action, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'action-btn';
+        
+        // Special logic for "Some Girl" logic: Cannot be used if opponent has less than 2 cards, OR if already used once this game.
+        let isDisabled = false;
+        let extraText = '';
+        if (card.name === 'SomeGirl' && action.name === 'Explode!') {
+           const player = game.players.find(p => p.key === playerKey);
+           const opponent = game.players.find(p => p.key !== playerKey);
+           
+           if (player && player.usedSomeGirlExplosion) {
+             isDisabled = true;
+             extraText = '<br><span style="color:red; font-size:0.9rem;">(Explode can only be used ONCE per game)</span>';
+           } else if (opponent && opponent.hand.length < 2) {
+             isDisabled = true;
+             extraText = '<br><span style="color:red; font-size:0.9rem;">(Opponent needs at least 2 cards)</span>';
+           }
+        }
+        
+        btn.innerHTML = `<strong>${action.name}</strong><br><small style="font-size:1rem; font-weight:normal">${action.description}</small>${extraText}`;
+        
+        if (isDisabled) {
+           btn.disabled = true;
+           btn.style.opacity = '0.5';
+           btn.style.cursor = 'not-allowed';
+        } else {
+           btn.onclick = () => {
+             showTriviaOverlay(playerKey, card, action);
+           };
+        }
+        
+        list.appendChild(btn);
+      });
+
+      document.getElementById('cancel-action-btn').onclick = () => {
+        overlay.style.display = 'none';
+        isTransitioning = false;
+        // Deselect the card
+        const player = game.players.find(p => p.key === playerKey);
+        if (player) player.selected = null;
+        render();
+      };
+
+      overlay.style.display = 'flex';
+    };
+
+    const showTriviaOverlay = (playerKey, card, action) => {
+      document.getElementById('action-overlay').style.display = 'none';
+      const overlay = document.getElementById('trivia-overlay');
+      
+      audioSystem.playSfx('trivstart');
+      
+      // Pick a random question from the action's questions array
+      const questionObj = action.questions[Math.floor(Math.random() * action.questions.length)];
+      
+      document.getElementById('trivia-question').textContent = questionObj.question;
+      const optionsContainer = document.getElementById('trivia-options');
+      optionsContainer.innerHTML = '';
+
+      // Timer Logic
+      const timerBar = document.getElementById('trivia-timer-bar');
+      const TRIVIA_TIME = 15; // 15 seconds
+      let timeLeft = TRIVIA_TIME;
+      let answered = false;
+      timerBar.style.width = '100%';
+      timerBar.style.backgroundColor = '#2ecc71'; // Start green
+
+      const timerInterval = setInterval(() => {
+        if (answered) {
+          clearInterval(timerInterval);
+          return;
+        }
+        timeLeft -= 0.1;
+        const percent = (timeLeft / TRIVIA_TIME) * 100;
+        timerBar.style.width = `${percent}%`;
+        
+        // Color shifts as time goes down
+        if (percent < 50 && percent >= 20) {
+          timerBar.style.backgroundColor = '#f1c40f'; // Yellow
+        } else if (percent < 20) {
+          timerBar.style.backgroundColor = '#e74c3c'; // Red
+        }
+
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          answered = true;
+          // Auto fail when time is up
+          Array.from(optionsContainer.children).forEach(b => {
+            b.disabled = true;
+            if (b.dataset.correct === "true") b.classList.add('correct');
+            else b.classList.add('wrong');
+          });
+          showBattleLog("Time's up! Turn lost.");
+          setTimeout(() => finishTurn(playerKey, card, action, false), 2000);
+        }
+      }, 100);
+
+      // Randomize options
+      const options = questionObj.options.map((opt, i) => ({ text: opt, isCorrect: i === questionObj.answer }));
+      options.sort(() => Math.random() - 0.5);
+
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'trivia-btn';
+        btn.textContent = opt.text;
+        btn.dataset.correct = opt.isCorrect;
+        
+        btn.onclick = () => {
+          if (answered) return;
+          answered = true;
+          clearInterval(timerInterval);
+          
+          // Disable all buttons after click
+          Array.from(optionsContainer.children).forEach(b => b.disabled = true);
+          
+          if (opt.isCorrect) {
+            audioSystem.playSfx('trivcorrect');
+            btn.classList.add('correct');
+            // Dim the others
+            Array.from(optionsContainer.children).forEach(b => {
+              if (b !== btn) b.classList.add('wrong');
+            });
+            setTimeout(() => finishTurn(playerKey, card, action, true), 1500);
+          } else {
+            audioSystem.playSfx('trivwrong');
+            btn.classList.add('wrong');
+            // Highlight correct one
+            Array.from(optionsContainer.children).forEach(b => {
+              if (b.dataset.correct === "true") {
+                b.classList.add('correct');
+              } else {
+                b.classList.add('wrong');
+              }
+            });
+            setTimeout(() => finishTurn(playerKey, card, action, false), 2500);
+          }
+        };
+        optionsContainer.appendChild(btn);
+      });
+
+      overlay.style.display = 'flex';
+    };
+
+    // --- Start Screen & Setup Logic ---
+    const slideshowImages = [
+      "Assets/Other/Credita.png",
+      "Assets/Other/JLT.png",
+      "Assets/Other/PSA.png",
+      "Assets/Other/Tap.png",
+      "Assets/Other/bones.png",
+      "Assets/Other/doyou.png",
+      "Assets/Other/inshallah.png",
+      "Assets/Other/loser.png",
+      "Assets/Other/possibke.png",
+      "Assets/Other/start.png",
+      "Assets/Other/this is pokemon but bones.png",
+      "Assets/Other/unfair.png",
+      "Assets/Other/welove.png",
+      "Assets/Other/winner.png"
+    ];
+
+    let currentSlideQueue = [];
+    let activeSlideEl = null;
+    let slideshowTimer = null;
+
+    const fillSlideQueue = () => {
+      currentSlideQueue = [...slideshowImages].sort(() => Math.random() - 0.5);
+    };
+
+    const nextSlide = () => {
+      if (currentSlideQueue.length === 0) {
+        fillSlideQueue();
+      }
+      
+      const nextSrc = currentSlideQueue.pop();
+      const container = document.getElementById('slideshow-container');
+      
+      const newSlide = document.createElement('img');
+      newSlide.src = nextSrc;
+      newSlide.className = 'slideshow-img';
+      container.appendChild(newSlide);
+      
+      // Force reflow
+      void newSlide.offsetWidth;
+
+      // Slide out the old one
+      if (activeSlideEl) {
+        activeSlideEl.classList.remove('active');
+        activeSlideEl.classList.add('exit');
+        // Clean up old slide after transition
+        const oldSlide = activeSlideEl;
+        setTimeout(() => {
+          if (oldSlide && oldSlide.parentNode) {
+            oldSlide.parentNode.removeChild(oldSlide);
+          }
+        }, 1500); 
+      }
+
+      // Slide in the new one
+      newSlide.classList.add('active');
+      activeSlideEl = newSlide;
+
+      // Queue the next slide
+      clearTimeout(slideshowTimer);
+      slideshowTimer = setTimeout(nextSlide, 10000); // 10 seconds
+    };
+
+    const startSlideshow = () => {
+      const container = document.getElementById('slideshow-container');
+      container.innerHTML = '';
+      activeSlideEl = null;
+      currentSlideQueue = [];
+      nextSlide();
+    };
+
+    const stopSlideshow = () => {
+      clearTimeout(slideshowTimer);
+    };
+
+    let idleTimer;
+    const resetIdleTimer = () => {
+      clearTimeout(idleTimer);
+      if (document.getElementById('board').style.display === 'block') {
+        return;
+      }
+      idleTimer = setTimeout(() => {
+        if (document.getElementById('board').style.display === 'block') {
+          return;
+        }
+        startScreen.style.display = 'block';
+        document.getElementById('super-menu').style.display = 'none';
+        document.getElementById('profile-menu').style.display = 'none';
+        document.getElementById('name-setup').style.display = 'none';
+        document.getElementById('board').style.display = 'none'; // Hide board on idle
+        document.body.classList.remove('shae-theme', 'jurassic-theme', 'tech-theme', 'art-theme', 'basketball-theme', 'tiktok-theme', 'theo-theme'); // Strip all custom themes
+        document.body.removeAttribute('data-active'); // Remove player accent tint
+        document.body.removeAttribute('data-screen'); // Remove setup screen background animation
+        audioSystem.musicPlayer.pause(); // Pause background music on idle
+        isNewTurn = true; // Reset game animation state if we idle out
+        startSlideshow();
+      }, 60000); 
+    };
+
+    startScreen.addEventListener('click', () => {
+      startScreen.style.display = 'none';
+      stopSlideshow();
+      document.getElementById('super-menu').style.display = 'flex';
+      document.body.setAttribute('data-screen', 'setup');
+      setSceneAccents(selectedPlayerColors.p1, selectedPlayerColors.p2, selectedPlayerColors.p1);
+      resetIdleTimer();
+    });
+
+    // Initialize the very first slideshow
+    startSlideshow();
+
+    let focusedInput = document.getElementById('p2-name');
+
+    const checkVipName = (inputEl) => {
+      const val = inputEl.value.trim().toLowerCase();
+      const vipNames = ['shae', 'mrgerk', 'henry', 'george', 'kenly', 'marwan', 'calisto', 'theo', 'theodore', 'tj'];
+      if (vipNames.includes(val)) {
+        inputEl.classList.add('vip-input-effect');
+      } else {
+        inputEl.classList.remove('vip-input-effect');
+      }
+    };
+
+    document.querySelectorAll('#p2-name').forEach(input => {
+      input.addEventListener('focus', (e) => {
+        focusedInput = e.target;
+        setupActiveAccent('p2');
+      });
+      input.addEventListener('input', (e) => {
+        checkVipName(e.target);
+      });
+    });
+
+    document.getElementById('silent-mode-toggle').addEventListener('change', (e) => {
+      audioSystem.setSilentMode(e.target.checked);
+      resetIdleTimer();
+    });
+
+    document.getElementById('start-game-btn').addEventListener('click', () => {
+      if (window.isMultiplayer) {
+        if (!window.onlineSession?.active || !window.onlineSession.matchId) {
+          document.getElementById('matchmaking-status').textContent = 'Find a match before starting.';
+          return;
+        }
+        if (window.myPlayerKey !== 'p1') {
+          document.getElementById('matchmaking-status').textContent = 'Waiting for the host to start the match.';
+          return;
+        }
+      }
+
+      const p1Name = (userProfile.username || "Player 1").trim();
+      const p2Name = window.isMultiplayer
+        ? (window.onlineSession?.opponent?.username || document.getElementById('p2-name').value.trim() || "Player 2")
+        : (document.getElementById('p2-name').value.trim() || "Player 2");
+      
+      const gameLengthSelect = document.getElementById('game-length');
+      const startHp = gameLengthSelect ? parseInt(gameLengthSelect.value, 10) : 500;
+      
+      const p1Lower = p1Name.toLowerCase();
+      const p2Lower = p2Name.toLowerCase();
+      audioSystem.isShaePlaying = p1Lower === 'shae' || p2Lower === 'shae';
+      
+      audioSystem.startMusic();
+      
+      let finalP1Name = p1Name;
+      let finalP2Name = p2Name;
+
+      if (p1Lower === 'falarmi') finalP1Name = 'flared meat';
+      if (p2Lower === 'falarmi') finalP2Name = 'flared meat';
+      if (p1Lower === 'manhattan') finalP1Name = 'Stinky Man';
+      if (p2Lower === 'manhattan') finalP2Name = 'Stinky Man';
+
+      game.players[0].label = finalP1Name;
+      game.players[1].label = finalP2Name;
+      game.players[0].title = userProfile.title; // Set P1 title
+      game.players[1].title = window.isMultiplayer ? (window.onlineSession?.opponent?.title || '') : '';
+      game.players[0].accent = selectedPlayerColors.p1;
+      game.players[1].accent = window.isMultiplayer ? (window.onlineSession?.opponent?.accent || selectedPlayerColors.p2) : selectedPlayerColors.p2;
+      game.players[0].maxHp = startHp;
+      game.players[0].hp = startHp;
+      game.players[1].maxHp = startHp;
+      game.players[1].hp = startHp;
+      window.deathHandled = false;
+      window.deathHandledProfile = false;
+      replayState.frames = [];
+      replayState.index = 0;
+      replayState.playing = false;
+      clearInterval(replayState.timer);
+      replayState.timer = null;
+
+      if (startHp === 2500) {
+        game.players[0].handSize = 5;
+        game.players[1].handSize = 5;
+        // Redraw initial hands with new size
+        game.players[0].hand = game.randomCards(5, "p1");
+        game.players[1].hand = game.randomCards(5, "p2");
+      }
+      
+      document.getElementById('name-setup').style.display = 'none';
+      document.body.removeAttribute('data-screen'); // Remove setup screen background animation
+      document.getElementById('board').style.display = 'block'; // Show board
+      isNewTurn = true; // Trigger animation for the start of the game
+      
+      // If Henry, George, Abby, or Shae are playing, their secret advantage is handled inside the randomCards method
+      // (They silently draw vastly better cards)
+
+      // Randomize who goes first
+      game.currentTurn = Math.random() < 0.5 ? "p1" : "p2";
+
+      if (window.isMultiplayer) {
+        window.onlineSession.started = true;
+        window.peerConnection = { mode: 'server-sync' };
+      }
+
+      recordReplayStep('Match started');
+      syncOnlineControls();
+      render();
+      showTurnBanner(); 
+    });
+
+    window.addEventListener('mousemove', resetIdleTimer);
+    window.addEventListener('touchstart', resetIdleTimer);
+    window.addEventListener('keydown', resetIdleTimer);
+    window.addEventListener('resize', () => {
+      if (document.getElementById('board').style.display === 'block' && document.getElementById('replay-overlay').style.display !== 'block') {
+        render();
+      }
+    });
+
+    // --- Developer Options (Alt x 5) ---
+    let altCount = 0;
+    let altTimer;
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Alt') {
+        altCount++;
+        clearTimeout(altTimer);
+        altTimer = setTimeout(() => altCount = 0, 1000);
+        if (altCount >= 5) {
+          altCount = 0;
+          const dev = document.getElementById('dev-options');
+          dev.style.display = dev.style.display === 'none' ? 'block' : 'none';
+        }
+      }
+    });
+
+    // --- Background PS3 Ribbon & Particles Logic ---
+    const initBgParticles = () => {
+      const canvas = document.getElementById('bg-particles');
+      const ctx = canvas.getContext('2d');
+      
+      let width, height;
+      const resize = () => {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+      };
+      
+      window.addEventListener('resize', resize);
+      resize();
+
+      let time = 0;
+      const lightSources = [];
+      const spawnLight = (light = null) => {
+        const activeKey = document.body.getAttribute('data-active') || 'p1';
+        const isP2 = activeKey === 'p2';
+        let p1Color = selectedPlayerColors.p1;
+        let p2Color = selectedPlayerColors.p2;
+        if (typeof game !== 'undefined' && game.players && game.players[0].accent) {
+           p1Color = game.players[0].accent;
+           p2Color = game.players[1].accent;
+        }
+        // 85% chance to be the active player's color
+        const favored = Math.random() < 0.85 ? (isP2 ? p2Color : p1Color) : (isP2 ? p1Color : p2Color);
+        
+        const baseHue = getHueFromHex(favored);
+        const target = light || {};
+        target.x = Math.random() * width;
+        target.y = Math.random() * height;
+        target.radius = Math.random() * 240 + 180;
+        target.blurRadius = target.radius * (Math.random() * 0.8 + 0.9);
+        target.hue = (baseHue + (Math.random() * 56 - 28) + 360) % 360;
+        target.saturation = Math.random() * 22 + 64;
+        target.lightness = Math.random() * 12 + 62;
+        target.alpha = Math.random() * 0.2 + 0.12;
+        target.life = Math.random() * 5400 + 5200;
+        target.age = 0;
+        target.driftX = (Math.random() - 0.5) * 0.07;
+        target.driftY = (Math.random() - 0.5) * 0.07;
+        return target;
+      };
+
+      for (let i = 0; i < 14; i++) {
+        lightSources.push(spawnLight());
+      }
+      
+      // Configuration for the ribbons (Light theme) - Ultra realistic organic flow
+      const ribbons = [
+        { color: 'rgba(0, 0, 0, 0.015)', offset: 0, amplitude: 220, speed: 0.0001, thickness: 250, waveComplexity: 0.0008 },
+        { color: 'rgba(0, 0, 0, 0.02)', offset: 150, amplitude: 180, speed: 0.00015, thickness: 180, waveComplexity: 0.001 },
+        { color: 'rgba(0, 0, 0, 0.025)', offset: 300, amplitude: 120, speed: 0.0002, thickness: 100, waveComplexity: 0.0012 },
+        { color: 'rgba(0, 0, 0, 0.01)', offset: 450, amplitude: 280, speed: 0.00008, thickness: 300, waveComplexity: 0.0005 } // Deep background ribbon
+      ];
+
+      // Configuration for the rainbow particles - Realistic atmospheric dust/bokeh
+      const jurassicEmojis = ['🦕', '🦖', '🌴', '🌋', '🦴'];
+      const techEmojis = ['💻', '🎵', '🎶', '⌨️', '🎧', '⚡️', '0', '1'];
+      const artEmojis = ['🎨', '🖌️', '🖼️', '🖍️', '✨'];
+      const basketballEmojis = ['🏀', '⛹️‍♂️', '🏟️', '🔥'];
+      const tiktokEmojis = ['📱', '🎵', '🤳', '✨', '🤍'];
+      const theoEmojis = ['🌧️', '⛈️', '🎹', '🌩️', '☔️', '☁️'];
+      const flaredEmojis = ['🥩', '🔥', '🍖', '🥓', '🍴'];
+      const stinkyEmojis = ['💩', '🧦', '🧀', '🤢', '🦠'];
+
+      const particles = [];
+      for (let i = 0; i < 1000; i++) { // Massively increased count
+        const size = Math.random() * 4 + 0.5;
+        particles.push({
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          r: size,
+          // Parallax effect: smaller particles move slower, but overall much faster now
+          dx: (Math.random() - 0.5) * (size * 0.15),
+          dy: (Math.random() - 0.5) * (size * 0.15) - (size * 0.05), // Faster upward thermal drift
+          vx: 0,
+          vy: 0,
+          hue: Math.random() * 360,
+          baseOpacity: Math.random() * 0.15 + 0.05,
+          pulseSpeed: Math.random() * 0.001 + 0.0005,
+          pulseOffset: Math.random() * Math.PI * 2,
+          wobbleSpeed: Math.random() * 0.004,
+          wobbleOffset: Math.random() * Math.PI * 2,
+          isHeart: Math.random() < 0.1, // 10% chance to be a heart or theme emoji
+          emojiJurassic: jurassicEmojis[Math.floor(Math.random() * jurassicEmojis.length)],
+          emojiTech: techEmojis[Math.floor(Math.random() * techEmojis.length)],
+          emojiArt: artEmojis[Math.floor(Math.random() * artEmojis.length)],
+          emojiBasketball: basketballEmojis[Math.floor(Math.random() * basketballEmojis.length)],
+          emojiTiktok: tiktokEmojis[Math.floor(Math.random() * tiktokEmojis.length)],
+          emojiTheo: theoEmojis[Math.floor(Math.random() * theoEmojis.length)],
+          emojiFlared: flaredEmojis[Math.floor(Math.random() * flaredEmojis.length)],
+          emojiStinky: stinkyEmojis[Math.floor(Math.random() * stinkyEmojis.length)]
+        });
+      }
+
+      window.burstParticles = (originX, originY) => {
+        particles.forEach(p => {
+          const dx = p.x - originX;
+          const dy = p.y - originY;
+          const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+          // Add explosive force outwards from origin
+          const force = (Math.random() * 4000 + 2000) / (dist * 0.1 + 1);
+          p.vx += (dx / dist) * force;
+          p.vy += (dy / dist) * force;
+        });
+      };
+
+      const drawHeart = (ctx, x, y, size, hue, opacity) => {
+        ctx.save();
+        ctx.beginPath();
+        const topCurveHeight = size * 0.3;
+        ctx.moveTo(x, y + topCurveHeight);
+        ctx.bezierCurveTo(x, y, x - size / 2, y, x - size / 2, y + topCurveHeight);
+        ctx.bezierCurveTo(x - size / 2, y + (size + topCurveHeight) / 2, x, y + (size + topCurveHeight) / 2, x, y + size);
+        ctx.bezierCurveTo(x, y + (size + topCurveHeight) / 2, x + size / 2, y + (size + topCurveHeight) / 2, x + size / 2, y + topCurveHeight);
+        ctx.bezierCurveTo(x + size / 2, y, x, y, x, y + topCurveHeight);
+        ctx.closePath();
+        
+        const gradient = ctx.createRadialGradient(x, y + size/2, 0, x, y + size/2, size);
+        gradient.addColorStop(0, `hsla(${hue}, 90%, 80%, ${opacity})`);
+        gradient.addColorStop(0.5, `hsla(${hue}, 80%, 60%, ${opacity * 0.8})`);
+        gradient.addColorStop(1, `hsla(${hue}, 90%, 50%, 0)`);
+        
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        ctx.restore();
+      };
+
+      const drawLights = () => {
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        lightSources.forEach(light => {
+          light.age += 16;
+          light.x += light.driftX;
+          light.y += light.driftY;
+          const lifeT = light.age / light.life;
+          if (lifeT >= 1 || light.x < -300 || light.x > width + 300 || light.y < -300 || light.y > height + 300) {
+            spawnLight(light);
+          }
+          const fade = Math.sin(Math.min(1, light.age / light.life) * Math.PI);
+          const alpha = light.alpha * fade;
+          const coreGradient = ctx.createRadialGradient(light.x, light.y, 0, light.x, light.y, light.radius);
+          coreGradient.addColorStop(0, `hsla(${light.hue}, ${light.saturation}%, ${light.lightness + 10}%, ${alpha})`);
+          coreGradient.addColorStop(0.45, `hsla(${light.hue}, ${light.saturation}%, ${light.lightness}%, ${alpha * 0.6})`);
+          coreGradient.addColorStop(1, `hsla(${light.hue}, ${light.saturation}%, ${light.lightness - 8}%, 0)`);
+          ctx.fillStyle = coreGradient;
+          ctx.beginPath();
+          ctx.arc(light.x, light.y, light.radius, 0, Math.PI * 2);
+          ctx.fill();
+          const bloomGradient = ctx.createRadialGradient(light.x, light.y, 0, light.x, light.y, light.blurRadius);
+          bloomGradient.addColorStop(0, `hsla(${light.hue}, ${light.saturation}%, ${light.lightness + 18}%, ${alpha * 0.5})`);
+          bloomGradient.addColorStop(1, `hsla(${light.hue}, ${light.saturation}%, ${light.lightness}%, 0)`);
+          ctx.fillStyle = bloomGradient;
+          ctx.beginPath();
+          ctx.arc(light.x, light.y, light.blurRadius, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.restore();
+      };
+
+      const drawRibbon = (ribbon) => {
+        ctx.beginPath();
+        
+        // Draw the top edge of the ribbon
+        for (let x = 0; x <= width; x += 15) { // Tighter step for smoother curves
+          // Ultra realistic flow using 3 sine waves for organic chaotic movement
+          const y = height / 2 
+                  + Math.sin(x * ribbon.waveComplexity + time * ribbon.speed + ribbon.offset) * ribbon.amplitude
+                  + Math.sin(x * (ribbon.waveComplexity * 0.7) + time * (ribbon.speed * 0.8)) * (ribbon.amplitude * 0.6)
+                  + Math.cos(x * (ribbon.waveComplexity * 1.3) + time * (ribbon.speed * 1.2)) * (ribbon.amplitude * 0.3);
+                  
+          if (x === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+
+        // Draw the bottom edge backwards to create a shape
+        for (let x = width; x >= 0; x -= 15) {
+          const y = height / 2 
+                  + Math.sin(x * ribbon.waveComplexity + time * ribbon.speed + ribbon.offset) * ribbon.amplitude
+                  + Math.sin(x * (ribbon.waveComplexity * 0.7) + time * (ribbon.speed * 0.8)) * (ribbon.amplitude * 0.6)
+                  + Math.cos(x * (ribbon.waveComplexity * 1.3) + time * (ribbon.speed * 1.2)) * (ribbon.amplitude * 0.3)
+                  + ribbon.thickness;
+                  
+          ctx.lineTo(x, y);
+        }
+
+        ctx.closePath();
+        
+        // Create a highly subtle, volumetric gradient for the ribbon
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        gradient.addColorStop(0, ribbon.color);
+        gradient.addColorStop(0.5, ribbon.color.replace(/0\.\d+\)/, '0.05)')); // Soft highlight in the middle
+        gradient.addColorStop(1, ribbon.color.replace(/0\.\d+\)/, '0.01)')); // Fade out at the bottom
+        
+        ctx.fillStyle = gradient;
+        ctx.fill();
+      };
+
+      const drawParticles = () => {
+        const isShaeMode = document.body.classList.contains('shae-theme');
+        const isJurassicMode = document.body.classList.contains('jurassic-theme');
+        const isTechMode = document.body.classList.contains('tech-theme');
+        const isArtMode = document.body.classList.contains('art-theme');
+        const isBasketballMode = document.body.classList.contains('basketball-theme');
+        const isTiktokMode = document.body.classList.contains('tiktok-theme');
+        const isTheoMode = document.body.classList.contains('theo-theme');
+        const isFlaredMode = document.body.classList.contains('flared-theme');
+        const isStinkyMode = document.body.classList.contains('stinky-theme');
+        
+        particles.forEach(p => {
+          // Calculate organic opacity pulsing
+          const currentOpacity = p.baseOpacity + Math.sin(time * p.pulseSpeed + p.pulseOffset) * p.baseOpacity;
+          if (currentOpacity <= 0.01) return; // Skip drawing if basically invisible
+
+          // Add a slight horizontal wobble to simulate air currents
+          const currentX = p.x + Math.sin(time * p.wobbleSpeed + p.wobbleOffset) * (p.r * 2);
+
+          if (isShaeMode && p.isHeart) {
+            // Force pink/purple hue for hearts in Shae mode, larger size
+            const heartHue = Math.random() > 0.5 ? 330 : 300; 
+            drawHeart(ctx, currentX, p.y, p.r * 8, heartHue, currentOpacity * 1.5);
+          } else if ((isJurassicMode || isTechMode || isArtMode || isBasketballMode || isTiktokMode || isTheoMode) && p.isHeart) {
+            ctx.save();
+            ctx.globalAlpha = currentOpacity * 1.5;
+            ctx.font = `${p.r * 6}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            let text = '';
+            if (isJurassicMode) text = p.emojiJurassic;
+            else if (isTechMode) text = p.emojiTech;
+            else if (isArtMode) text = p.emojiArt;
+            else if (isBasketballMode) text = p.emojiBasketball;
+            else if (isTiktokMode) text = p.emojiTiktok;
+            else if (isTheoMode) text = p.emojiTheo;
+            else if (isFlaredMode) text = p.emojiFlared;
+            else if (isStinkyMode) text = p.emojiStinky;
+            ctx.fillText(text, currentX, p.y);
+            ctx.restore();
+          } else {
+            // Create a radial gradient for each particle to simulate out-of-focus bokeh
+            const gradient = ctx.createRadialGradient(currentX, p.y, 0, currentX, p.y, p.r);
+            
+            let particleHue = p.hue;
+            if (isShaeMode) particleHue = (p.hue % 60) + 280; 
+            else if (isJurassicMode) particleHue = (p.hue % 40) + 80;
+            else if (isTechMode) particleHue = (p.hue % 40) + 160;
+            else if (isBasketballMode) particleHue = (p.hue % 30) + 20;
+            else if (isTiktokMode) particleHue = Math.random() > 0.5 ? 180 : 330;
+            else if (isTheoMode) particleHue = (p.hue % 30) + 210; // Stormy blues
+            else if (isFlaredMode) particleHue = (p.hue % 30) + 0; // Meat reds
+            else if (isStinkyMode) particleHue = (p.hue % 40) + 80; // Mossy greens
+
+            gradient.addColorStop(0, `hsla(${particleHue}, 70%, 80%, ${currentOpacity})`);
+            gradient.addColorStop(0.4, `hsla(${particleHue}, 80%, 60%, ${currentOpacity * 0.8})`);
+            gradient.addColorStop(1, `hsla(${particleHue}, 90%, 50%, 0)`);
+
+            ctx.beginPath();
+            ctx.arc(currentX, p.y, p.r, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+          }
+
+          p.x += p.dx + p.vx;
+          p.y += p.dy + p.vy;
+          
+          // Apply friction to velocity so bursts slow down naturally
+          p.vx *= 0.92;
+          p.vy *= 0.92;
+
+          p.hue += 0.05; // Extremely slow color shifting
+
+          // Gentle wrap around with large buffer so they don't pop in/out
+          if (p.x < -20) p.x = width + 20;
+          if (p.x > width + 20) p.x = -20;
+          if (p.y < -20) p.y = height + 20;
+          if (p.y > height + 20) p.y = -20;
+        });
+      };
+
+      const animateParticles = () => {
+        ctx.clearRect(0, 0, width, height);
+        
+        // Ensure background is transparent so body gradient shows
+        canvas.style.backgroundColor = 'transparent';
+        
+        drawLights();
+        ribbons.forEach(ribbon => drawRibbon(ribbon));
+        drawParticles();
+
+        time += 16; // Approx 60fps delta
+        requestAnimationFrame(animateParticles);
+      };
+
+      animateParticles();
+    };
+
+    // Preload images
+    const preloadAssets = () => {
+      slideshowImages.forEach(src => {
+        const img = new Image();
+        img.src = src;
+      });
+      const allCards = [
+          "Assets/Cards/Damage/FemFemFemur.png",
+          "Assets/Cards/Damage/SharkTooth.png",
+          "Assets/Cards/Damage/TheBONE.png",
+          "Assets/Cards/Damage/TriloBite.png",
+          "Assets/Cards/Health/Fern.png",
+          "Assets/Cards/Health/SaintGerken.png",
+          "Assets/Cards/Magic/Javier.png",
+          "Assets/Cards/Magic/JawiusJr.png",
+          "Assets/Cards/Magic/SomeGirl.png",
+          "Assets/Cards/Magic/Theodore.png",
+          "Assets/Cards/Damage/BigS.png",
+          "Assets/Cards/Damage/OneyPlays.png",
+          "Assets/Cards/Damage/BigJohnAI.png"
+      ];
+      allCards.forEach(src => {
+        const img = new Image();
+        img.src = src;
+      });
+    };
+    preloadAssets();
+
+    // Initialize particles when script loads
+    initBgParticles();
+
+    render();
+
+    // -- App Services --
+    window.game = game;
+    window.render = render;
+    window.showTurnBanner = showTurnBanner;
+    window.handleDeath = handleDeath;
+    window.isMultiplayer = false;
+    window.peerConnection = null;
+    window.myPlayerKey = null;
+    window.isReceivingSync = false;
+    window.onlineSession = {
+      active: false,
+      queued: false,
+      started: false,
+      matchId: null,
+      playerKey: null,
+      token: null,
+      seq: 0,
+      signature: '',
+      opponent: null,
+      lastReactionId: null,
+      lastChatId: null,
+      replayId: null,
+      queueTimer: null,
+      stateTimer: null,
+      syncInFlight: false
+    };
+
+    const DEFAULT_PROFILE = {
+      username: 'Player 1',
+      wins: 0,
+      gamesPlayed: 0,
+      title: '',
+      accent: selectedPlayerColors.p1,
+      friends: []
+    };
+    const SECRET_KEY = "BONEYRADIUM_SECURE_KEY_2026";
+    const superMenu = document.getElementById('super-menu');
+    const nameSetup = document.getElementById('name-setup');
+    const profileMenu = document.getElementById('profile-menu');
+    const multiplayerUi = document.getElementById('multiplayer-ui');
+    const p1NameInput = document.getElementById('p1-display-name');
+    const p2NameInput = document.getElementById('p2-name');
+    const p2InputGroup = p2NameInput.parentElement;
+    const matchmakingStatusEl = document.getElementById('matchmaking-status');
+    const activeServerLabel = document.getElementById('active-server-label');
+    const friendListEl = document.getElementById('friend-list');
+    const matchmakingFriendsEl = document.getElementById('matchmaking-friends');
+    const onlineChatLogEl = document.getElementById('online-chat-log');
+    const onlineChatInputEl = document.getElementById('online-chat-input');
+    const onlineChatSendBtn = document.getElementById('online-chat-send-btn');
+    const onlineChatLogLiveEl = document.getElementById('online-chat-log-live');
+    const onlineChatInputLiveEl = document.getElementById('online-chat-input-live');
+    const onlineChatSendBtnLive = document.getElementById('online-chat-send-btn-live');
+    const serverReplayIdInput = document.getElementById('server-replay-id-input');
+    const loadServerReplayBtn = document.getElementById('load-server-replay-btn');
+    const startGameButton = document.getElementById('start-game-btn');
+    const quitMatchButton = document.getElementById('quit-match-btn');
+    const quitMatchButtonLive = document.getElementById('quit-match-btn-live');
+    const onlineMatchControls = document.getElementById('online-match-controls');
+    const replayOverlay = document.getElementById('replay-overlay');
+    const replayCaption = document.getElementById('replay-caption');
+    const replayStepLabel = document.getElementById('replay-step-label');
+
+    const xorEncryptDecrypt = (input) => {
+      let output = '';
+      for (let i = 0; i < input.length; i++) {
+        output += String.fromCharCode(input.charCodeAt(i) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length));
+      }
+      return output;
+    };
+
+    const escapeHtml = (value = '') => value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const sanitizeText = (value, fallback = '', maxLength = 24) => {
+      const cleaned = String(value ?? '')
+        .replace(/[^\w\s\-!?.]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      return (cleaned || fallback).slice(0, maxLength);
+    };
+
+    const fixUsername = (value, fallback = 'Player 1') => {
+      const base = sanitizeText(value, fallback, 24);
+      const words = base.split(' ').filter(Boolean).map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase());
+      return (words.join(' ') || fallback).slice(0, 24);
+    };
+
+    const normalizeProfile = (profile = {}) => ({
+      username: fixUsername(profile.username, DEFAULT_PROFILE.username),
+      wins: Number.isFinite(Number(profile.wins)) ? Math.max(0, Number(profile.wins)) : 0,
+      gamesPlayed: Number.isFinite(Number(profile.gamesPlayed)) ? Math.max(0, Number(profile.gamesPlayed)) : 0,
+      title: sanitizeText(profile.title, '', 32),
+      accent: /^#[0-9a-fA-F]{6}$/.test(profile.accent || '') ? profile.accent : DEFAULT_PROFILE.accent,
+      friends: Array.isArray(profile.friends) ? [...new Set(profile.friends.map(name => sanitizeText(name, '', 24)).filter(Boolean))].slice(0, 50) : []
+    });
+
+    const loadProfile = () => {
+      try {
+        const raw = localStorage.getItem('br_profile');
+        if (raw) {
+          const decoded = atob(raw);
+          const decrypted = xorEncryptDecrypt(decoded);
+          return normalizeProfile(JSON.parse(decrypted));
+        }
+      } catch (error) {
+        console.warn('Failed to load profile', error);
+      }
+      return normalizeProfile(DEFAULT_PROFILE);
+    };
+
+    const saveProfile = (profile) => {
+      try {
+        const normalized = normalizeProfile(profile);
+        const encrypted = xorEncryptDecrypt(JSON.stringify(normalized));
+        localStorage.setItem('br_profile', btoa(encrypted));
+        localStorage.setItem('boneyP1Accent', normalized.accent);
+      } catch (error) {
+        console.warn('Failed to save profile', error);
+      }
+    };
+
+    const userProfile = loadProfile();
+    userProfile.username = fixUsername(userProfile.username, 'Player 1');
+    selectedPlayerColors.p1 = userProfile.accent;
+    activeServerLabel.textContent = window.serverConfig.baseUrl;
+    document.getElementById('custom-server-url').value = window.serverConfig.baseUrl;
+    p1NameInput.value = userProfile.username;
+
+    const replayState = {
+      frames: [],
+      index: 0,
+      playing: false,
+      timer: null,
+      liveState: null
+    };
+
+    const cloneReplayGameState = () => ({
+      currentTurn: game.currentTurn,
+      players: game.players.map(player => ({
+        key: player.key,
+        label: player.label,
+        title: player.title,
+        accent: player.accent,
+        hp: player.hp,
+        maxHp: player.maxHp,
+        handSize: player.handSize,
+        selected: player.selected,
+        extraTurns: player.extraTurns,
+        poisonRounds: player.poisonRounds,
+        poisonDamage: player.poisonDamage,
+        usedSomeGirlExplosion: player.usedSomeGirlExplosion,
+        hand: player.hand.map(card => ({
+          id: card.id,
+          src: card.src,
+          name: card.name,
+          fadeLevel: card.fadeLevel,
+          data: card.data
+        }))
+      }))
+    });
+
+    const applyReplayFrame = (index) => {
+      if (!replayState.frames.length) return;
+      replayState.index = Math.max(0, Math.min(index, replayState.frames.length - 1));
+      const frame = replayState.frames[replayState.index];
+      game.currentTurn = frame.state.currentTurn;
+      game.players = frame.state.players.map(player => ({
+        ...player,
+        hand: player.hand.map(card => ({ ...card }))
+      }));
+      render();
+      replayStepLabel.textContent = `Step ${replayState.index + 1} / ${replayState.frames.length}`;
+      replayCaption.textContent = frame.caption;
+    };
+
+    const recordReplayStep = (caption) => {
+      replayState.frames.push({
+        caption,
+        state: cloneReplayGameState()
+      });
+      if (replayState.frames.length > 120) {
+        replayState.frames.shift();
+      }
+    };
+
+    const serverRequest = async (path, { method = 'GET', body, query } = {}) => {
+      const url = new URL(`${window.serverConfig.baseUrl}${path}`);
+      if (query) {
+        Object.entries(query).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') {
+            url.searchParams.set(key, value);
+          }
+        });
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+
+      try {
+        const response = await fetch(url.toString(), {
+          method,
+          headers: body ? { 'Content-Type': 'application/json' } : undefined,
+          body: body ? JSON.stringify(body) : undefined,
+          signal: controller.signal
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload.ok === false) {
+          throw new Error(payload.error || `${response.status} ${response.statusText}`);
+        }
+        return payload;
+      } finally {
+        clearTimeout(timeout);
+      }
+    };
+
+    const resetOnlineTimers = () => {
+      clearInterval(window.onlineSession.queueTimer);
+      clearInterval(window.onlineSession.stateTimer);
+      window.onlineSession.queueTimer = null;
+      window.onlineSession.stateTimer = null;
+    };
+
+    const updateStartButtonState = () => {
+      if (!window.isMultiplayer) {
+        startGameButton.disabled = false;
+        startGameButton.textContent = 'Start Game';
+        return;
+      }
+
+      if (!window.onlineSession.active) {
+        startGameButton.disabled = true;
+        startGameButton.textContent = 'Find Match First';
+        return;
+      }
+
+      if (window.myPlayerKey === 'p1') {
+        startGameButton.disabled = false;
+        startGameButton.textContent = 'Start Matched Game';
+        return;
+      }
+
+      startGameButton.disabled = true;
+      startGameButton.textContent = 'Waiting For Host';
+    };
+
+    const syncOnlineControls = () => {
+      const showLiveHud = window.isMultiplayer && window.onlineSession.active && board.style.display === 'block';
+      onlineMatchControls.style.display = showLiveHud ? 'flex' : 'none';
+      const canQuit = window.onlineSession.active;
+      quitMatchButton.disabled = !canQuit;
+      quitMatchButtonLive.disabled = !canQuit;
+    };
+
+    const resetOnlineSession = ({ preserveStatus = false } = {}) => {
+      resetOnlineTimers();
+      window.onlineSession = {
+        active: false,
+        queued: false,
+        started: false,
+        matchId: null,
+        playerKey: null,
+        token: null,
+        seq: 0,
+        signature: '',
+        opponent: null,
+        lastReactionId: null,
+        lastChatId: null,
+        replayId: null,
+        queueTimer: null,
+        stateTimer: null,
+        syncInFlight: false
+      };
+      window.peerConnection = null;
+      window.myPlayerKey = null;
+      if (!preserveStatus) {
+        matchmakingStatusEl.textContent = 'Ready to queue.';
+      }
+      onlineChatLogEl.innerHTML = '';
+      onlineChatLogLiveEl.innerHTML = '';
+      onlineChatInputEl.value = '';
+      onlineChatInputLiveEl.value = '';
+      updateStartButtonState();
+      syncOnlineControls();
+    };
+
+    const showOnlineReaction = (fromLabel, reaction) => {
+      showBattleLog(`${fromLabel} reacted ${reaction}`);
+    };
+
+    const renderOnlineChat = (messages = []) => {
+      if (!messages.length) {
+        onlineChatLogEl.innerHTML = '<div class="online-chat-row" style="color: var(--text-dim);">No chat yet.</div>';
+        onlineChatLogLiveEl.innerHTML = '<div class="online-chat-row" style="color: var(--text-dim);">No chat yet.</div>';
+        return;
+      }
+      const markup = messages.map((entry) => {
+        const author = entry.playerKey === window.myPlayerKey ? 'You' : (window.onlineSession.opponent?.username || 'Opponent');
+        return `<div class="online-chat-row"><strong>${escapeHtml(author)}:</strong> ${escapeHtml(entry.message || '')}</div>`;
+      }).join('');
+      onlineChatLogEl.innerHTML = markup;
+      onlineChatLogLiveEl.innerHTML = markup;
+      onlineChatLogEl.scrollTop = onlineChatLogEl.scrollHeight;
+      onlineChatLogLiveEl.scrollTop = onlineChatLogLiveEl.scrollHeight;
+    };
+
+    const renderFriends = (friends = []) => {
+      const normalizedFriends = friends.length
+        ? friends
+        : userProfile.friends.map(name => ({ username: name, online: false, title: '' }));
+
+      if (!normalizedFriends.length) {
+        friendListEl.innerHTML = '<div style="padding: 0.8rem; border: 1px dashed var(--line); border-radius: 12px; color: var(--text-dim);">No friends yet.</div>';
+        matchmakingFriendsEl.innerHTML = '<div style="padding: 0.8rem; border: 1px dashed var(--line); border-radius: 12px; color: var(--text-dim);">No friends synced yet.</div>';
+        return;
+      }
+
+      const markup = normalizedFriends.map((friend) => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1rem; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,0.75);">
+          <div>
+            <div style="font-weight: 700;">${escapeHtml(friend.username)}</div>
+            <div style="font-size: 0.9rem; color: var(--text-dim);">${friend.online ? 'Online' : 'Offline'}${friend.title ? ` • ${escapeHtml(friend.title)}` : ''}</div>
+          </div>
+          <div style="width: 0.8rem; height: 0.8rem; border-radius: 999px; background: ${friend.online ? '#3ad37c' : '#b5bcc7'};"></div>
+        </div>
+      `).join('');
+
+      friendListEl.innerHTML = markup;
+      matchmakingFriendsEl.innerHTML = markup;
+    };
+
+    const updateProfileUI = () => {
+      document.getElementById('profile-username').value = userProfile.username;
+      document.getElementById('profile-wins').textContent = userProfile.wins;
+      document.getElementById('profile-games').textContent = userProfile.gamesPlayed;
+      document.getElementById('profile-title').value = userProfile.title;
+      document.getElementById('profile-accent').value = userProfile.accent;
+      p1NameInput.value = userProfile.username;
+      document.getElementById('title-novice').disabled = userProfile.wins < 5;
+      document.getElementById('title-bone').disabled = userProfile.wins < 10;
+      document.getElementById('title-radium').disabled = userProfile.wins < 25;
+      renderFriends();
+    };
+
+    const sanitizeGameState = (state) => ({
+      currentTurn: state.currentTurn === 'p2' ? 'p2' : 'p1',
+      players: state.players.map((player) => ({
+        key: player.key === 'p2' ? 'p2' : 'p1',
+        label: sanitizeText(player.label, player.key === 'p1' ? 'Player 1' : 'Player 2', 24),
+        title: sanitizeText(player.title || '', '', 32),
+        accent: /^#[0-9a-fA-F]{6}$/.test(player.accent || '') ? player.accent : '#66d6ff',
+        hp: Math.max(0, Math.round(Number(player.hp) || 0)),
+        maxHp: Math.max(1, Math.round(Number(player.maxHp) || 500)),
+        selected: player.selected ? String(player.selected).slice(0, 64) : null,
+        extraTurns: Math.max(0, Math.min(5, Number(player.extraTurns) || 0)),
+        poisonRounds: Math.max(0, Math.min(5, Number(player.poisonRounds) || 0)),
+        poisonDamage: Math.max(0, Math.min(400, Number(player.poisonDamage) || 0)),
+        handSize: Math.max(1, Math.min(5, Number(player.handSize) || 3)),
+        usedSomeGirlExplosion: Boolean(player.usedSomeGirlExplosion),
+        hand: player.hand.map((card) => ({
+          id: String(card.id || '').slice(0, 64),
+          src: String(card.src || '').slice(0, 256),
+          name: sanitizeText(card.name || '', '', 32),
+          fadeLevel: Math.max(0, Math.min(3, Number(card.fadeLevel) || 0)),
+          data: card.data || null
+        }))
+      }))
+    });
+
+    const sendHeartbeat = async () => {
+      try {
+        await serverRequest('/api/heartbeat', {
+          method: 'POST',
+          body: {
+            username: userProfile.username,
+            title: userProfile.title,
+            accent: userProfile.accent
+          }
+        });
+      } catch (error) {
+        console.warn('Heartbeat failed', error);
+      }
+    };
+
+    const refreshFriends = async () => {
+      try {
+        const payload = await serverRequest('/api/friends', {
+          query: { username: userProfile.username }
+        });
+        if (Array.isArray(payload.friends)) {
+          userProfile.friends = payload.friends.map((friend) => friend.username);
+          saveProfile(userProfile);
+          renderFriends(payload.friends);
+        } else {
+          renderFriends();
+        }
+      } catch (error) {
+        console.warn('Friend refresh failed', error);
+        renderFriends();
+      }
+    };
+
+    const applyRemoteState = (state, showBanner = false) => {
+      const previousTurn = game.currentTurn;
+      window.isReceivingSync = true;
+      Object.assign(game, state);
+      nameSetup.style.display = 'none';
+      document.body.removeAttribute('data-screen');
+      board.style.display = 'block';
+      window.onlineSession.started = true;
+      render();
+      if (showBanner || previousTurn !== game.currentTurn) {
+        showTurnBanner();
+      }
+      const p1 = game.players[0];
+      const p2 = game.players[1];
+      if ((p1.hp <= 0 || p2.hp <= 0) && !window.deathHandled) {
+        window.deathHandled = true;
+        window.handleDeath(p1.hp <= 0 ? p1 : p2, p1.hp <= 0 ? p2 : p1);
+      }
+      window.isReceivingSync = false;
+    };
+
+    const pollMatchState = async () => {
+      if (!window.onlineSession.active || !window.onlineSession.matchId) {
+        return;
+      }
+      try {
+        const payload = await serverRequest(`/api/matches/${window.onlineSession.matchId}/state`, {
+          query: {
+            playerKey: window.onlineSession.playerKey,
+            token: window.onlineSession.token
+          }
+        });
+
+        if (payload.opponent) {
+          window.onlineSession.opponent = payload.opponent;
+          p2NameInput.value = payload.opponent.username;
+        }
+
+        if (payload.quitBy) {
+          const quitterLabel = payload.quitBy === window.myPlayerKey
+            ? 'You'
+            : (window.onlineSession.opponent?.username || 'Opponent');
+          showBattleLog(`${quitterLabel} quit the match.`);
+          matchmakingStatusEl.textContent = payload.quitBy === window.myPlayerKey
+            ? 'You left the match.'
+            : 'Opponent quit the match.';
+          if (board.style.display === 'block') {
+            board.style.display = 'none';
+            nameSetup.style.display = 'flex';
+            document.body.setAttribute('data-screen', 'setup');
+          }
+          resetOnlineSession({ preserveStatus: true });
+          if (payload.replayId) {
+            matchmakingStatusEl.textContent += ` Replay ID: ${payload.replayId}`;
+            serverReplayIdInput.value = payload.replayId;
+          }
+          return;
+        }
+
+        if (payload.reactions?.length) {
+          const lastReaction = payload.reactions[payload.reactions.length - 1];
+          if (lastReaction?.id && lastReaction.id !== window.onlineSession.lastReactionId) {
+            window.onlineSession.lastReactionId = lastReaction.id;
+            const senderLabel = lastReaction.playerKey === window.myPlayerKey
+              ? 'You'
+              : (window.onlineSession.opponent?.username || 'Opponent');
+            showOnlineReaction(senderLabel, lastReaction.message);
+          }
+        }
+
+        if (payload.chatMessages?.length) {
+          const lastChat = payload.chatMessages[payload.chatMessages.length - 1];
+          if (lastChat?.id && lastChat.id !== window.onlineSession.lastChatId) {
+            window.onlineSession.lastChatId = lastChat.id;
+          }
+          renderOnlineChat(payload.chatMessages);
+        }
+
+        if (payload.replayId) {
+          window.onlineSession.replayId = payload.replayId;
+        }
+
+        if (payload.seq > window.onlineSession.seq && payload.state) {
+          window.onlineSession.seq = payload.seq;
+          window.onlineSession.signature = payload.signature || '';
+          applyRemoteState(payload.state, payload.showTurnBanner);
+        }
+      } catch (error) {
+        console.warn('Match polling failed', error);
+      }
+    };
+
+    const activateMatchedSession = (payload) => {
+      resetOnlineTimers();
+      window.onlineSession.active = true;
+      window.onlineSession.queued = false;
+      window.onlineSession.started = false;
+      window.onlineSession.matchId = payload.matchId;
+      window.onlineSession.playerKey = payload.playerKey;
+      window.onlineSession.token = payload.token;
+      window.onlineSession.seq = payload.seq || 0;
+      window.onlineSession.signature = payload.signature || '';
+      window.onlineSession.opponent = payload.opponent || null;
+      window.onlineSession.lastReactionId = payload.lastReactionId || null;
+      window.onlineSession.lastChatId = payload.lastChatId || null;
+      window.onlineSession.replayId = payload.replayId || null;
+      serverReplayIdInput.value = payload.replayId || '';
+      window.myPlayerKey = payload.playerKey;
+      window.peerConnection = { mode: 'server-sync' };
+      window.isMultiplayer = true;
+      p2InputGroup.style.display = 'none';
+      p1NameInput.value = userProfile.username;
+      p2NameInput.value = payload.opponent?.username || 'Opponent';
+      selectedPlayerColors.p2 = payload.opponent?.accent || selectedPlayerColors.p2;
+      matchmakingStatusEl.textContent = payload.playerKey === 'p1'
+        ? 'Match found. You are the host. Configure the match and start when ready.'
+        : 'Match found. Waiting for the host to start.';
+      updateStartButtonState();
+      quitMatchButton.disabled = false;
+      renderOnlineChat([]);
+      window.onlineSession.stateTimer = setInterval(pollMatchState, 900);
+      syncOnlineControls();
+    };
+
+    const sendReaction = async (reaction) => {
+      if (!window.onlineSession.active || !window.onlineSession.matchId || !window.onlineSession.token) {
+        matchmakingStatusEl.textContent = 'Join a match before sending reactions.';
+        return;
+      }
+      try {
+        const payload = await serverRequest(`/api/matches/${window.onlineSession.matchId}/reaction`, {
+          method: 'POST',
+          body: {
+            playerKey: window.myPlayerKey,
+            token: window.onlineSession.token,
+            message: reaction
+          }
+        });
+        if (payload.lastReactionId) {
+          window.onlineSession.lastReactionId = payload.lastReactionId;
+        }
+        showOnlineReaction('You', reaction);
+      } catch (error) {
+        matchmakingStatusEl.textContent = `Reaction failed: ${error.message}`;
+      }
+    };
+
+    const quitOnlineMatch = async () => {
+      if (!window.onlineSession.active || !window.onlineSession.matchId) {
+        return;
+      }
+      let replayId = '';
+      try {
+        const payload = await serverRequest(`/api/matches/${window.onlineSession.matchId}/quit`, {
+          method: 'POST',
+          body: {
+            playerKey: window.myPlayerKey,
+            token: window.onlineSession.token
+          }
+        });
+        replayId = payload.replayId || '';
+      } catch (error) {
+        console.warn('Quit match failed', error);
+      }
+      matchmakingStatusEl.textContent = 'You left the match.';
+      if (replayId) {
+        matchmakingStatusEl.textContent += ` Replay ID: ${replayId}`;
+        serverReplayIdInput.value = replayId;
+      }
+      if (board.style.display === 'block') {
+        board.style.display = 'none';
+        nameSetup.style.display = 'flex';
+        document.body.setAttribute('data-screen', 'setup');
+      }
+      resetOnlineSession({ preserveStatus: true });
+      syncOnlineControls();
+    };
+
+    const sendChatMessage = async () => {
+      const raw = onlineChatInputEl.value.trim();
+      if (!raw) return;
+      if (!window.onlineSession.active || !window.onlineSession.matchId || !window.onlineSession.token) {
+        matchmakingStatusEl.textContent = 'Join a match before chatting.';
+        return;
+      }
+      try {
+        const payload = await serverRequest(`/api/matches/${window.onlineSession.matchId}/chat`, {
+          method: 'POST',
+          body: {
+            playerKey: window.myPlayerKey,
+            token: window.onlineSession.token,
+            message: raw
+          }
+        });
+        if (payload.lastChatId) {
+          window.onlineSession.lastChatId = payload.lastChatId;
+        }
+        onlineChatInputEl.value = '';
+        onlineChatInputLiveEl.value = '';
+      } catch (error) {
+        matchmakingStatusEl.textContent = `Chat failed: ${error.message}`;
+      }
+    };
+
+    const loadServerReplay = async () => {
+      const replayId = serverReplayIdInput.value.trim();
+      if (!replayId) return;
+      try {
+        const payload = await serverRequest(`/api/replays/${encodeURIComponent(replayId)}`);
+        const replay = payload.replay;
+        if (!replay?.frames?.length) {
+          matchmakingStatusEl.textContent = 'Replay has no frames.';
+          return;
+        }
+        replayState.frames = replay.frames.map((frame, index) => ({
+          caption: `Server Replay #${index + 1}`,
+          state: frame.state
+        }));
+        replayState.index = 0;
+        replayState.playing = false;
+        clearInterval(replayState.timer);
+        replayState.timer = null;
+        replayState.liveState = cloneReplayGameState();
+        replayOverlay.style.display = 'block';
+        document.getElementById('replay-play-btn').textContent = 'Play';
+        applyReplayFrame(0);
+      } catch (error) {
+        matchmakingStatusEl.textContent = `Replay load failed: ${error.message}`;
+      }
+    };
+
+    const queueForMatch = async () => {
+      try {
+        saveProfile(userProfile);
+        await sendHeartbeat();
+        matchmakingStatusEl.textContent = 'Searching for another skeleton scientist...';
+        const payload = await serverRequest('/api/matchmaking/join', {
+          method: 'POST',
+          body: {
+            username: userProfile.username,
+            title: userProfile.title,
+            accent: userProfile.accent,
+            antiCheat: window.serverConfig.antiCheat
+          }
+        });
+
+        if (payload.status === 'matched') {
+          activateMatchedSession(payload);
+          return;
+        }
+
+        window.onlineSession.queued = true;
+        updateStartButtonState();
+        window.onlineSession.queueTimer = setInterval(async () => {
+          try {
+            const status = await serverRequest('/api/matchmaking/status', {
+              query: { username: userProfile.username }
+            });
+            if (status.status === 'matched') {
+              activateMatchedSession(status);
+            } else if (status.status === 'queued') {
+              matchmakingStatusEl.textContent = `Queued • ${status.queueSize || 1} player(s) ahead`;
+            }
+          } catch (error) {
+            matchmakingStatusEl.textContent = `Queue check failed: ${error.message}`;
+          }
+        }, 1500);
+      } catch (error) {
+        matchmakingStatusEl.textContent = `Matchmaking unavailable: ${error.message}`;
+      }
+    };
+
+    window.broadcastState = async (showBanner = false) => {
+      if (!window.isMultiplayer || !window.onlineSession.active || !window.onlineSession.started || window.isReceivingSync || window.onlineSession.syncInFlight) {
+        return;
+      }
+
+      window.onlineSession.syncInFlight = true;
+      try {
+        const payload = await serverRequest(`/api/matches/${window.onlineSession.matchId}/sync`, {
+          method: 'POST',
+          body: {
+            playerKey: window.myPlayerKey,
+            token: window.onlineSession.token,
+            previousSignature: window.onlineSession.signature,
+            seq: window.onlineSession.seq,
+            antiCheat: window.serverConfig.antiCheat,
+            showTurnBanner: Boolean(showBanner),
+            state: sanitizeGameState(game)
+          }
+        });
+
+        window.onlineSession.seq = payload.seq;
+        window.onlineSession.signature = payload.signature || '';
+        if (payload.replayId) {
+          window.onlineSession.replayId = payload.replayId;
+          serverReplayIdInput.value = payload.replayId;
+          matchmakingStatusEl.textContent = `Match ended. Replay ID: ${payload.replayId}`;
+        }
+      } catch (error) {
+        matchmakingStatusEl.textContent = `Server rejected the update: ${error.message}`;
+      } finally {
+        window.onlineSession.syncInFlight = false;
+      }
+    };
+
+    const originalHandleDeath = window.handleDeath;
+    window.handleDeath = (loser, winner, ...args) => {
+      recordReplayStep(`${winner.label} wins the match`);
+      if (!window.deathHandledProfile) {
+        window.deathHandledProfile = true;
+        userProfile.gamesPlayed++;
+        if (!window.isMultiplayer && winner.key === 'p1') {
+          userProfile.wins++;
+        } else if (window.isMultiplayer && winner.key === window.myPlayerKey) {
+          userProfile.wins++;
+        }
+        saveProfile(userProfile);
+      }
+      originalHandleDeath(loser, winner, ...args);
+    };
+
+    document.getElementById('menu-local-btn').addEventListener('click', () => {
+      resetOnlineSession();
+      superMenu.style.display = 'none';
+      nameSetup.style.display = 'flex';
+      multiplayerUi.style.display = 'none';
+      p2InputGroup.style.display = 'flex';
+      p1NameInput.value = userProfile.username;
+      p2NameInput.focus();
+      window.isMultiplayer = false;
+      updateStartButtonState();
+      syncOnlineControls();
+    });
+
+    document.getElementById('menu-online-btn').addEventListener('click', async () => {
+      resetOnlineSession();
+      superMenu.style.display = 'none';
+      nameSetup.style.display = 'flex';
+      multiplayerUi.style.display = 'flex';
+      p2InputGroup.style.display = 'none';
+      p1NameInput.value = userProfile.username;
+      window.isMultiplayer = true;
+      activeServerLabel.textContent = window.serverConfig.baseUrl;
+      matchmakingStatusEl.textContent = 'Ready to queue.';
+      updateStartButtonState();
+      syncOnlineControls();
+      await sendHeartbeat();
+      await refreshFriends();
+    });
+
+    document.getElementById('menu-profile-btn').addEventListener('click', async () => {
+      superMenu.style.display = 'none';
+      profileMenu.style.display = 'flex';
+      updateProfileUI();
+      await refreshFriends();
+    });
+
+    document.getElementById('menu-settings-btn').addEventListener('click', () => {
+      document.getElementById('settings-overlay').style.display = 'flex';
+    });
+
+    document.getElementById('close-profile-btn').addEventListener('click', () => {
+      userProfile.username = fixUsername(document.getElementById('profile-username').value, 'Player 1');
+      userProfile.title = sanitizeText(document.getElementById('profile-title').value, '', 32);
+      userProfile.accent = document.getElementById('profile-accent').value;
+      selectedPlayerColors.p1 = userProfile.accent;
+      saveProfile(userProfile);
+      profileMenu.style.display = 'none';
+      superMenu.style.display = 'flex';
+      p1NameInput.value = userProfile.username;
+    });
+
+    document.getElementById('profile-username').addEventListener('blur', (event) => {
+      const fixed = fixUsername(event.target.value, 'Player 1');
+      event.target.value = fixed;
+      p1NameInput.value = fixed;
+    });
+
+    document.getElementById('profile-username').addEventListener('change', (event) => {
+      const fixed = fixUsername(event.target.value, 'Player 1');
+      event.target.value = fixed;
+      p1NameInput.value = fixed;
+    });
+
+    document.getElementById('watch-replay-btn').addEventListener('click', () => {
+      if (!replayState.frames.length) return;
+      replayState.liveState = cloneReplayGameState();
+      replayOverlay.style.display = 'block';
+      replayState.playing = false;
+      clearInterval(replayState.timer);
+      replayState.timer = null;
+      document.getElementById('replay-play-btn').textContent = 'Play';
+      applyReplayFrame(0);
+    });
+
+    document.getElementById('replay-close-btn').addEventListener('click', () => {
+      replayOverlay.style.display = 'none';
+      replayState.playing = false;
+      clearInterval(replayState.timer);
+      replayState.timer = null;
+      if (replayState.liveState) {
+        game.currentTurn = replayState.liveState.currentTurn;
+        game.players = replayState.liveState.players.map(player => ({
+          ...player,
+          hand: player.hand.map(card => ({ ...card }))
+        }));
+      }
+      render();
+    });
+
+    document.getElementById('replay-prev-btn').addEventListener('click', () => {
+      replayState.playing = false;
+      clearInterval(replayState.timer);
+      replayState.timer = null;
+      document.getElementById('replay-play-btn').textContent = 'Play';
+      applyReplayFrame(replayState.index - 1);
+    });
+
+    document.getElementById('replay-next-btn').addEventListener('click', () => {
+      replayState.playing = false;
+      clearInterval(replayState.timer);
+      replayState.timer = null;
+      document.getElementById('replay-play-btn').textContent = 'Play';
+      applyReplayFrame(replayState.index + 1);
+    });
+
+    document.getElementById('replay-play-btn').addEventListener('click', (event) => {
+      if (!replayState.frames.length) return;
+      replayState.playing = !replayState.playing;
+      event.target.textContent = replayState.playing ? 'Pause' : 'Play';
+      clearInterval(replayState.timer);
+      if (!replayState.playing) return;
+      replayState.timer = setInterval(() => {
+        const next = replayState.index + 1;
+        if (next >= replayState.frames.length) {
+          replayState.playing = false;
+          clearInterval(replayState.timer);
+          replayState.timer = null;
+          event.target.textContent = 'Play';
+          return;
+        }
+        applyReplayFrame(next);
+      }, 900);
+    });
+
+    document.getElementById('add-friend-btn').addEventListener('click', async () => {
+      const friendUsername = sanitizeText(document.getElementById('friend-username').value, '', 24);
+      if (!friendUsername || friendUsername === userProfile.username) {
+        return;
+      }
+
+      try {
+        await serverRequest('/api/friends/add', {
+          method: 'POST',
+          body: {
+            username: userProfile.username,
+            friend: friendUsername
+          }
+        });
+        document.getElementById('friend-username').value = '';
+        await refreshFriends();
+      } catch (error) {
+        console.warn('Add friend failed', error);
+      }
+    });
+
+    document.getElementById('find-match-btn').addEventListener('click', () => {
+      queueForMatch();
+    });
+
+    document.getElementById('cancel-match-btn').addEventListener('click', async () => {
+      try {
+        await serverRequest('/api/matchmaking/cancel', {
+          method: 'POST',
+          body: { username: userProfile.username }
+        });
+      } catch (error) {
+        console.warn('Cancel matchmaking failed', error);
+      }
+      resetOnlineSession();
+      syncOnlineControls();
+    });
+
+    document.getElementById('refresh-friends-btn').addEventListener('click', async () => {
+      await sendHeartbeat();
+      await refreshFriends();
+    });
+
+    quitMatchButton.addEventListener('click', async () => {
+      await quitOnlineMatch();
+    });
+    quitMatchButtonLive.addEventListener('click', async () => {
+      await quitOnlineMatch();
+    });
+
+    document.querySelectorAll('#reaction-strip .reaction-btn, #reaction-strip-live .reaction-btn').forEach((button) => {
+      button.addEventListener('click', async () => {
+        await sendReaction(button.dataset.reaction);
+      });
+    });
+
+    onlineChatSendBtn.addEventListener('click', async () => {
+      await sendChatMessage();
+    });
+    onlineChatSendBtnLive.addEventListener('click', async () => {
+      onlineChatInputEl.value = onlineChatInputLiveEl.value;
+      await sendChatMessage();
+    });
+    onlineChatInputEl.addEventListener('keydown', async (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        await sendChatMessage();
+      }
+    });
+    onlineChatInputLiveEl.addEventListener('keydown', async (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        onlineChatInputEl.value = onlineChatInputLiveEl.value;
+        await sendChatMessage();
+      }
+    });
+
+    loadServerReplayBtn.addEventListener('click', async () => {
+      await loadServerReplay();
+    });
+    serverReplayIdInput.addEventListener('keydown', async (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        await loadServerReplay();
+      }
+    });
+
+    const controllerState = {
+      focusIndex: -1,
+      lastMoveAt: 0,
+      activePadIndex: 0,
+      lastPressed: {
+        primary: false,
+        secondary: false,
+        left: false,
+        right: false,
+        up: false,
+        down: false
+      }
+    };
+
+    const visibleDisplay = (id) => {
+      const el = document.getElementById(id);
+      if (!el) return false;
+      const style = window.getComputedStyle(el).display;
+      return style !== 'none';
+    };
+
+    const getControllerTargets = () => {
+      if (visibleDisplay('replay-overlay')) {
+        return ['replay-prev-btn', 'replay-play-btn', 'replay-next-btn', 'replay-close-btn']
+          .map((id) => document.getElementById(id))
+          .filter((el) => el && !el.disabled);
+      }
+
+      if (visibleDisplay('trivia-overlay')) {
+        return [...document.querySelectorAll('#trivia-options .trivia-btn')].filter((el) => !el.disabled);
+      }
+
+      if (visibleDisplay('action-overlay')) {
+        return [...document.querySelectorAll('#action-list .action-btn, #cancel-action-btn')].filter((el) => !el.disabled);
+      }
+
+      if (visibleDisplay('settings-overlay')) {
+        return [...document.querySelectorAll('#settings-box button, #settings-box input, #settings-box select')].filter((el) => !el.disabled);
+      }
+
+      if (visibleDisplay('profile-menu')) {
+        return [...document.querySelectorAll('#profile-menu button, #profile-menu input, #profile-menu select')].filter((el) => !el.disabled);
+      }
+
+      if (visibleDisplay('super-menu')) {
+        return [...document.querySelectorAll('#super-menu button')].filter((el) => !el.disabled);
+      }
+
+      if (visibleDisplay('name-setup')) {
+        return [...document.querySelectorAll('#name-setup button, #name-setup input, #name-setup select')].filter((el) => !el.disabled);
+      }
+
+      if (visibleDisplay('board')) {
+        const matchControls = visibleDisplay('online-match-controls')
+          ? [...document.querySelectorAll('#online-match-controls button')].filter((el) => !el.disabled)
+          : [];
+        if (window.isMultiplayer && window.myPlayerKey && window.myPlayerKey !== game.currentTurn) {
+          return matchControls;
+        }
+        return [...matchControls, ...document.querySelectorAll(`#section-${game.currentTurn} .card`)];
+      }
+
+      return [];
+    };
+
+    const clearControllerFocus = () => {
+      document.querySelectorAll('.gamepad-focus').forEach((el) => el.classList.remove('gamepad-focus'));
+    };
+
+    const syncControllerFocus = () => {
+      const targets = getControllerTargets();
+      clearControllerFocus();
+      if (!targets.length) {
+        controllerState.focusIndex = -1;
+        return targets;
+      }
+      if (controllerState.focusIndex < 0 || controllerState.focusIndex >= targets.length) {
+        controllerState.focusIndex = 0;
+      }
+      const target = targets[controllerState.focusIndex];
+      if (target) {
+        target.classList.add('gamepad-focus');
+        if (target.scrollIntoView) {
+          target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        }
+      }
+      return targets;
+    };
+
+    const moveControllerFocus = (step) => {
+      const targets = getControllerTargets();
+      if (!targets.length) {
+        controllerState.focusIndex = -1;
+        clearControllerFocus();
+        return;
+      }
+      if (controllerState.focusIndex < 0) {
+        controllerState.focusIndex = 0;
+      } else {
+        controllerState.focusIndex = (controllerState.focusIndex + step + targets.length) % targets.length;
+      }
+      syncControllerFocus();
+    };
+
+    const pressFocusedControl = () => {
+      const targets = syncControllerFocus();
+      if (!targets.length) return;
+      const target = targets[controllerState.focusIndex];
+      if (target && typeof target.click === 'function') {
+        target.click();
+      }
+    };
+
+    const backControllerAction = () => {
+      if (visibleDisplay('replay-overlay')) {
+        document.getElementById('replay-close-btn').click();
+        return;
+      }
+      if (visibleDisplay('action-overlay')) {
+        document.getElementById('cancel-action-btn').click();
+        return;
+      }
+      if (visibleDisplay('settings-overlay')) {
+        document.getElementById('close-settings-btn').click();
+        return;
+      }
+      if (visibleDisplay('profile-menu')) {
+        document.getElementById('close-profile-btn').click();
+      }
+    };
+
+    const pollControllers = () => {
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const activePad = pads[controllerState.activePadIndex] || [...pads].find(Boolean);
+      if (!activePad) {
+        clearControllerFocus();
+        requestAnimationFrame(pollControllers);
+        return;
+      }
+
+      controllerState.activePadIndex = activePad.index;
+      const now = performance.now();
+      const axisX = activePad.axes?.[0] || 0;
+      const axisY = activePad.axes?.[1] || 0;
+      const threshold = 0.5;
+      const moveReady = now - controllerState.lastMoveAt > 170;
+      const pressed = {
+        primary: Boolean(activePad.buttons?.[0]?.pressed),
+        secondary: Boolean(activePad.buttons?.[1]?.pressed),
+        left: Boolean(activePad.buttons?.[14]?.pressed) || axisX < -threshold,
+        right: Boolean(activePad.buttons?.[15]?.pressed) || axisX > threshold,
+        up: Boolean(activePad.buttons?.[12]?.pressed) || axisY < -threshold,
+        down: Boolean(activePad.buttons?.[13]?.pressed) || axisY > threshold
+      };
+
+      if (moveReady && (pressed.left || pressed.up) && !(controllerState.lastPressed.left || controllerState.lastPressed.up)) {
+        moveControllerFocus(-1);
+        controllerState.lastMoveAt = now;
+      } else if (moveReady && (pressed.right || pressed.down) && !(controllerState.lastPressed.right || controllerState.lastPressed.down)) {
+        moveControllerFocus(1);
+        controllerState.lastMoveAt = now;
+      } else {
+        syncControllerFocus();
+      }
+
+      if (pressed.primary && !controllerState.lastPressed.primary) {
+        pressFocusedControl();
+      }
+      if (pressed.secondary && !controllerState.lastPressed.secondary) {
+        backControllerAction();
+      }
+
+      controllerState.lastPressed = pressed;
+      requestAnimationFrame(pollControllers);
+    };
+
+    window.addEventListener('gamepadconnected', (event) => {
+      controllerState.activePadIndex = event.gamepad.index;
+      syncControllerFocus();
+    });
+
+    window.addEventListener('gamepaddisconnected', () => {
+      clearControllerFocus();
+    });
+
+    requestAnimationFrame(pollControllers);
+
+    updateProfileUI();
+    updateStartButtonState();
+    syncOnlineControls();
+    sendHeartbeat();
+
+  </script>
+</body>
+</html>

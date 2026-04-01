@@ -1,0 +1,9 @@
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+dist/
+release.zip
+release/
+build/
+!release/releases.json

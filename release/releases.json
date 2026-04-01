@@ -1,0 +1,36 @@
+{
+  "releases": [
+    {
+      "version": "1.0.0",
+      "platform": "mac",
+      "arch": "x64",
+      "filename": "BoneyRadium-1.0.0.dmg",
+      "channel": "stable",
+      "notes": "macOS DMG build"
+    },
+    {
+      "version": "1.0.0",
+      "platform": "mac",
+      "arch": "x64",
+      "filename": "BoneyRadium-1.0.0-mac.zip",
+      "channel": "stable",
+      "notes": "macOS ZIP build"
+    },
+    {
+      "version": "1.0.0",
+      "platform": "win",
+      "arch": "x64",
+      "filename": "BoneyRadium-1.0.0-win.zip",
+      "channel": "stable",
+      "notes": "Windows ZIP build"
+    },
+    {
+      "version": "1.0.0",
+      "platform": "linux",
+      "arch": "x64",
+      "filename": "BoneyRadium-1.0.0.AppImage",
+      "channel": "stable",
+      "notes": "Linux AppImage build"
+    }
+  ]
+}
